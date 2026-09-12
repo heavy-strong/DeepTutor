@@ -506,6 +506,27 @@ class TestContextAssembly:
         assert "wait_for_user_reply" not in context.metadata
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "configured,expected",
+        [
+            ("", "en"),
+            ("en", "en"),
+            ("zh", "zh"),
+            ("ko", "ko"),
+            ("korean", "ko"),
+            ("KR", "ko"),
+        ],
+    )
+    async def test_context_uses_configured_reply_language(
+        self, partners_root, fake_orchestrator, configured, expected
+    ):
+        fake_orchestrator.script = finish("ok")
+        runner = _runner(partners_root, PartnerConfig(name="Ada", language=configured))
+
+        await runner.process_message(_msg())
+        assert fake_orchestrator.seen_contexts[0].language == expected
+
+    @pytest.mark.asyncio
     async def test_default_tools_resolve_to_full_toggleable_set(
         self, partners_root, fake_orchestrator
     ):

@@ -9,6 +9,8 @@ def _parse_language(language: str | None) -> str:
     raw = (language or "en").strip().lower()
     if raw.startswith("zh") or raw in {"cn", "chinese"}:
         return "zh"
+    if raw.startswith("ko") or raw in {"kr", "korean"}:
+        return "ko"
     return "en"
 
 

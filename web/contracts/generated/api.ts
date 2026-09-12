@@ -10836,7 +10836,7 @@ export interface components {
        * Language
        * @enum {string}
        */
-      readonly language: "zh" | "en";
+      readonly language: "zh" | "en" | "ko";
     };
     /** LearnerOverrideRequest */
     readonly LearnerOverrideRequest: {
@@ -13054,9 +13054,9 @@ export interface components {
       /** Code Block Wrap Long Lines */
       readonly code_block_wrap_long_lines?: boolean | null;
       /** Language */
-      readonly language?: ("zh" | "en") | null;
+      readonly language?: ("zh" | "en" | "ko") | null;
       /** Response Language */
-      readonly response_language?: ("zh" | "en") | null;
+      readonly response_language?: ("zh" | "en" | "ko") | null;
       /** Sidebar Description */
       readonly sidebar_description?: string | null;
       readonly sidebar_nav_order?:

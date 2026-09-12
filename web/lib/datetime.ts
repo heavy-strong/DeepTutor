@@ -1,7 +1,16 @@
-export type Language = "en" | "zh";
+export type Language = "en" | "zh" | "ko";
+
+export function languageFromI18n(language: string | undefined): Language {
+  const code = (language ?? "en").toLowerCase();
+  if (code.startsWith("zh")) return "zh";
+  if (code.startsWith("ko")) return "ko";
+  return "en";
+}
 
 export function getLocale(lang: Language): string {
-  return lang === "zh" ? "zh-CN" : "en-US";
+  if (lang === "zh") return "zh-CN";
+  if (lang === "ko") return "ko-KR";
+  return "en-US";
 }
 
 export function formatDate(

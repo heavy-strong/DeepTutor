@@ -46,6 +46,11 @@ test("a stored choice is reported for either language", () => {
     assert.equal(hasStoredLanguage(), true);
     assert.equal(readStoredLanguage(), "zh");
   });
+
+  withLocalStorage({ [LANGUAGE_STORAGE_KEY]: "ko" }, () => {
+    assert.equal(hasStoredLanguage(), true);
+    assert.equal(readStoredLanguage(), "ko");
+  });
 });
 
 test("an unusable value still counts as a choice and normalizes to English", () => {

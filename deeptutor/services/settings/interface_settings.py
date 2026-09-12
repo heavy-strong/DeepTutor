@@ -53,26 +53,45 @@ def _interface_settings_file():
     return get_path_service().get_settings_file("interface")
 
 
-def _normalize_language(language: Any, default: str = "en") -> str:
-    """
-    Normalize language codes:
-    - en/english -> en
-    - zh/chinese/cn -> zh
-    """
-    if language is None or language == "":
-        language = default
+_LANGUAGE_ALIASES: dict[str, str] = {
+    "en": "en",
+    "english": "en",
+    "zh": "zh",
+    "chinese": "zh",
+    "cn": "zh",
+    "ko": "ko",
+    "korean": "ko",
+    "kr": "ko",
+}
+_UI_LANGUAGES = frozenset({"en", "zh", "ko"})
+_RESPONSE_LANGUAGES = frozenset({"en", "zh", "ko"})
 
-    if isinstance(language, str):
-        s = language.lower().strip()
-        if s in {"en", "english"}:
-            return "en"
-        if s in {"zh", "chinese", "cn"}:
-            return "zh"
 
-    # Fall back to default
-    if isinstance(default, str):
-        return _normalize_language(default, "en")
+def _canonicalize_language(language: Any) -> str | None:
+    if not isinstance(language, str):
+        return None
+    return _LANGUAGE_ALIASES.get(language.lower().strip())
+
+
+def _normalize_to_allowed(language: Any, default: str, allowed: frozenset[str]) -> str:
+    """Map aliases onto *allowed*, then fall back through *default* to ``en``."""
+    code = _canonicalize_language(language)
+    if code in allowed:
+        return code
+    fallback = _canonicalize_language(default)
+    if fallback in allowed:
+        return fallback
     return "en"
+
+
+def _normalize_language(language: Any, default: str = "en") -> str:
+    """Normalize the interface locale: en/english, zh/chinese/cn, ko/korean/kr."""
+    return _normalize_to_allowed(language, default, _UI_LANGUAGES)
+
+
+def _normalize_response_language(language: Any, default: str = "en") -> str:
+    """Normalize reader-facing model output: en, zh, or ko."""
+    return _normalize_to_allowed(language, default, _RESPONSE_LANGUAGES)
 
 
 def resolve_languages(saved: Mapping[str, Any]) -> dict[str, str]:
@@ -86,14 +105,14 @@ def resolve_languages(saved: Mapping[str, Any]) -> dict[str, str]:
     own superset of defaults on top) go through this one function so they can
     never disagree about what a legacy file means.
 
-    ``_normalize_language`` already falls back to its ``default`` for a value
-    that is missing, blank or unrecognized, so absence, ``null`` and junk all
-    land on the interface language without a separate key-presence check.
+    ``_normalize_response_language`` already falls back to its ``default`` for a
+    value that is missing, blank or unrecognized, so absence, ``null`` and junk
+    all land on the interface language without a separate key-presence check.
     """
     language = _normalize_language(saved.get("language"), DEFAULT_UI_SETTINGS["language"])
     return {
         "language": language,
-        "response_language": _normalize_language(saved.get("response_language"), language),
+        "response_language": _normalize_response_language(saved.get("response_language"), language),
     }
 
 
@@ -243,4 +262,4 @@ def get_ui_language(default: str = "en") -> str:
 def get_response_language(default: str = "en") -> str:
     """Get the preferred reader-facing model output language."""
     settings = get_ui_settings()
-    return _normalize_language(settings.get("response_language"), default)
+    return _normalize_response_language(settings.get("response_language"), default)

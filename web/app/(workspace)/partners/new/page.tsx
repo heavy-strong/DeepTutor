@@ -190,6 +190,14 @@ export default function NewPartnerPage() {
   );
   const modelSummary = describeSelection(selection, t("System default"));
   const backupSummary = describeSelection(backupSelection, t("No backup"));
+  const languageSummary =
+    language === "ko"
+      ? t("language.korean")
+      : language === "zh"
+        ? t("language.chinese")
+        : language === "en"
+          ? t("language.english")
+          : t("Auto (English)");
 
   const assetCount =
     assets.knowledge_bases.length +
@@ -358,8 +366,9 @@ export default function NewPartnerPage() {
                   className="w-48 rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-[14px] outline-none transition-colors focus:border-[var(--ring)]"
                 >
                   <option value="">{t("Auto (English)")}</option>
-                  <option value="en">English</option>
-                  <option value="zh">中文</option>
+                  <option value="en">{t("language.english")}</option>
+                  <option value="zh">{t("language.chinese")}</option>
+                  <option value="ko">{t("language.korean")}</option>
                 </select>
               </div>
             </div>
@@ -432,6 +441,7 @@ export default function NewPartnerPage() {
                 {[
                   [t("Name"), name.trim() || "—"],
                   [t("Description"), description.trim() || "—"],
+                  [t("Reply language"), languageSummary],
                   [t("Soul"), soulSummary],
                   [t("Model"), modelSummary],
                   [t("Backup model"), backupSummary],

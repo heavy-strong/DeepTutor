@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import { apiFetch, apiUrl } from "@/lib/api";
 import {
+  isAppLanguage,
   resolveResponseLanguage,
   writeStoredLanguage,
   writeStoredResponseLanguage,
@@ -64,7 +65,7 @@ export function useSetupSync(
           theme?: unknown;
         };
         if (cancelled) return;
-        if (payload.language === "zh" || payload.language === "en") {
+        if (isAppLanguage(payload.language)) {
           writeStoredLanguage(payload.language);
           writeStoredResponseLanguage(
             resolveResponseLanguage(

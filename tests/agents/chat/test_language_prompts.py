@@ -52,6 +52,28 @@ def test_agentic_chat_final_prompt_uses_selected_language(
     assert "You are DeepTutor" in en_prompt
 
 
+def test_agentic_chat_korean_keeps_english_scaffolding_and_korean_directive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeRegistry:
+        def build_prompt_text(self, *_args, **_kwargs) -> str:
+            return "- tool"
+
+    monkeypatch.setattr(
+        "deeptutor.agents.chat.agentic_pipeline.get_tool_registry",
+        lambda: FakeRegistry(),
+    )
+
+    from deeptutor.core.context import UnifiedContext
+
+    ctx = UnifiedContext()
+    ko_prompt = AgenticChatPipeline(language="ko")._build_system_prompt([], ctx)
+
+    assert "You are DeepTutor" in ko_prompt
+    assert "한국어" in ko_prompt
+    assert "请严格使用中文" not in ko_prompt
+
+
 def test_mastery_plugin_system_prompt_uses_localized_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

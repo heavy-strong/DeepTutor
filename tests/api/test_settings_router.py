@@ -34,6 +34,38 @@ def test_load_ui_settings_migrates_legacy_language_to_response_language(
     assert settings["response_language"] == "zh"
 
 
+def test_load_ui_settings_preserves_korean_response_language(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    settings_file = tmp_path / "interface.json"
+    settings_file.write_text(
+        '{"theme": "snow", "language": "en", "response_language": "ko"}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings_router, "_settings_file", lambda: settings_file)
+
+    settings = settings_router.load_ui_settings()
+
+    assert settings["language"] == "en"
+    assert settings["response_language"] == "ko"
+
+
+def test_load_ui_settings_preserves_korean_interface_language(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    settings_file = tmp_path / "interface.json"
+    settings_file.write_text(
+        '{"theme": "snow", "language": "ko", "response_language": "en"}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings_router, "_settings_file", lambda: settings_file)
+
+    settings = settings_router.load_ui_settings()
+
+    assert settings["language"] == "ko"
+    assert settings["response_language"] == "en"
+
+
 def test_both_readers_of_interface_json_agree_on_a_legacy_file(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
@@ -72,6 +104,36 @@ async def test_ui_languages_are_persisted_independently(
 
     assert response["language"] == "en"
     assert response["response_language"] == "zh"
+
+
+@pytest.mark.asyncio
+async def test_korean_response_language_is_persisted(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    settings_file = tmp_path / "interface.json"
+    monkeypatch.setattr(settings_router, "_settings_file", lambda: settings_file)
+
+    response = await settings_router.update_ui_settings(
+        settings_router.UISettingsUpdate(theme="snow", language="en", response_language="ko")
+    )
+
+    assert response["language"] == "en"
+    assert response["response_language"] == "ko"
+
+
+@pytest.mark.asyncio
+async def test_korean_interface_language_is_persisted(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    settings_file = tmp_path / "interface.json"
+    monkeypatch.setattr(settings_router, "_settings_file", lambda: settings_file)
+
+    response = await settings_router.update_ui_settings(
+        settings_router.UISettingsUpdate(theme="snow", language="ko", response_language="en")
+    )
+
+    assert response["language"] == "ko"
+    assert response["response_language"] == "en"
 
 
 class _FakeEmbeddingAdapter:

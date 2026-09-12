@@ -196,6 +196,8 @@ def parse_language(language: Any) -> str:
         return "en"
     if code in ("zh", "chinese", "cn"):
         return "zh"
+    if code in ("ko", "korean", "kr"):
+        return "ko"
     return code
 
 

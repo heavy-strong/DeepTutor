@@ -338,8 +338,9 @@ export default function PartnerConfigure({
               className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-1.5 text-[13px] outline-none focus:border-[var(--ring)]"
             >
               <option value="">{t("Auto (English)")}</option>
-              <option value="en">English</option>
-              <option value="zh">中文</option>
+              <option value="en">{t("language.english")}</option>
+              <option value="zh">{t("language.chinese")}</option>
+              <option value="ko">{t("language.korean")}</option>
             </select>
           </div>
           <div className="sm:col-span-2">

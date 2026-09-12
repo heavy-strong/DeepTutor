@@ -35,6 +35,7 @@ import {
   normalizeCodeBlockShowLineNumbers,
   normalizeCodeBlockTheme,
   normalizeCodeBlockWrapLongLines,
+  isAppLanguage,
   normalizeLanguage,
   resolveResponseLanguage,
   readStoredActiveSessionId,
@@ -143,7 +144,7 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
           language?: unknown;
           response_language?: unknown;
         };
-        if (payload.language !== "zh" && payload.language !== "en") return;
+        if (!isAppLanguage(payload.language)) return;
         // Only what this browser is actually missing: a stored interface
         // language is this user's own choice and the server must not overwrite
         // it just because the response key was absent.

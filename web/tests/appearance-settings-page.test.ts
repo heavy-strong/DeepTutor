@@ -39,6 +39,13 @@ test("settings source contract: language settings live on Overview instead of Ap
   assert.match(overview, /updateResponseLanguage/);
 });
 
+test("settings source contract: both language preferences include Korean", () => {
+  const overview = readOverviewPage();
+
+  assert.match(overview, /\["en", "zh", "ko"\]/);
+  assert.match(overview, /t\("language\.korean"\)/);
+});
+
 test("appearance source contract: code blocks section follows the theme section", () => {
   const source = readAppearancePage();
 

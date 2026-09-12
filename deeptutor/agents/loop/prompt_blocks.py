@@ -18,6 +18,7 @@ from typing import Any
 
 from deeptutor.capabilities.protocol import PromptBlock
 from deeptutor.core.context import UnifiedContext
+from deeptutor.services.config import parse_language
 from deeptutor.services.prompt.language import append_language_directive
 
 
@@ -26,7 +27,7 @@ class LoopPromptAssembler:
 
     def __init__(self, *, prompts: dict[str, Any], language: str) -> None:
         self.prompts = prompts
-        self.language = "zh" if language.lower().startswith("zh") else "en"
+        self.language = parse_language((language or "en").strip() or "en")
 
     def system_prompt(
         self,

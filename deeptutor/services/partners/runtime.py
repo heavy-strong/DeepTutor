@@ -781,7 +781,13 @@ class PartnerRunner:
 
     def _language(self) -> str:
         lang = str(getattr(self.config, "language", "") or "").strip().lower()
-        return "zh" if lang.startswith("zh") else "en"
+        if not lang:
+            return "en"
+        if lang.startswith("zh") or lang in {"chinese", "cn"}:
+            return "zh"
+        if lang in {"ko", "korean", "kr"}:
+            return "ko"
+        return "en"
 
     def _channel_delivery_flag(self, channel_name: str, name: str, *, default: bool) -> bool:
         channels = getattr(self.config, "channels", None) or {}

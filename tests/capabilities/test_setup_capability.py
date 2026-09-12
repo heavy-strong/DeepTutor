@@ -142,6 +142,44 @@ async def test_apply_personal_setting_persists(isolated_settings: Path) -> None:
     assert get_ui_settings()["theme"] == "dark"
 
 
+def test_interface_and_reply_language_offer_korean(
+    isolated_settings: Path,
+) -> None:
+    specs = setting_specs()
+    assert {choice.value for choice in specs["interface.language"].choices()} == {
+        "en",
+        "zh",
+        "ko",
+    }
+    assert {choice.value for choice in specs["interface.response_language"].choices()} == {
+        "en",
+        "zh",
+        "ko",
+    }
+
+
+@pytest.mark.asyncio
+async def test_apply_persists_korean_reply_language(isolated_settings: Path) -> None:
+    from deeptutor.services.settings.interface_settings import get_ui_settings
+
+    outcome = await apply_setting("interface.response_language", "ko")
+
+    assert outcome.ok
+    assert outcome.value == "ko"
+    assert get_ui_settings()["response_language"] == "ko"
+
+
+@pytest.mark.asyncio
+async def test_apply_persists_korean_interface_language(isolated_settings: Path) -> None:
+    from deeptutor.services.settings.interface_settings import get_ui_settings
+
+    outcome = await apply_setting("interface.language", "ko")
+
+    assert outcome.ok
+    assert outcome.value == "ko"
+    assert get_ui_settings()["language"] == "ko"
+
+
 @pytest.mark.asyncio
 async def test_apply_reports_a_coupled_setting(isolated_settings: Path) -> None:
     outcome = await apply_setting("interface.language", "zh")

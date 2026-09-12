@@ -34,6 +34,11 @@ def test_chinese_aliases_resolve_to_zh(value: str) -> None:
     assert parse_language(value) == "zh"
 
 
+@pytest.mark.parametrize("value", ["ko", "KO", "Korean", "korean", "kr"])
+def test_korean_aliases_resolve_to_ko(value: str) -> None:
+    assert parse_language(value) == "ko"
+
+
 def test_regional_codes_keep_their_region() -> None:
     assert parse_language("zh-tw") == "zh-tw"
     assert parse_language("pt-BR") == "pt-br"
