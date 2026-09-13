@@ -2995,6 +2995,7 @@
   "Conversations": "聊天",
   "Tutor threads stay nested under the conversation they came from.": "小老师追问会折叠在它所来源的聊天下面。",
   "Archived conversations": "已归档聊天",
+  "Current": "当前",
   "Delete course?": "删除课程？",
   "Conversations will not be deleted. They will move to Unclassified.": "聊天不会被删除，而会移动到“未分类”。",
   "Filter by conversation type": "按聊天类型筛选",

@@ -45,5 +45,10 @@
   "Close": "닫기",
   "Breadcrumb": "경로",
   "On": "켜짐",
-  "Off": "꺼짐"
+  "Off": "꺼짐",
+  "Current": "현재",
+  "Conversations": "대화",
+  "Continue": "이어가기",
+  "Archived": "보관됨",
+  "New conversation": "새 대화"
 }

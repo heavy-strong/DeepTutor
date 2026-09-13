@@ -27,6 +27,7 @@ import {
   archivePartnerSession,
   destroyPartner,
   getPartner,
+  getPartnerSessions,
   startPartner,
   stopPartner,
   type PartnerInfo,
@@ -37,8 +38,9 @@ import {
 } from "@/lib/chat-export";
 import {
   freshPartnerSessionKey,
-  loadPartnerSessionKey,
+  latestOpenSessionKey,
   persistPartnerSessionKey,
+  storedPartnerSessionKey,
 } from "@/lib/partner-session";
 import PartnerAvatar from "@/components/partners/PartnerAvatar";
 import PartnerChat from "@/components/partners/PartnerChat";
@@ -90,7 +92,26 @@ function PartnerDetail() {
   // point the (always-mounted) Chat tab at a different conversation.
   const [sessionKey, setSessionKey] = useState("");
   useEffect(() => {
-    setSessionKey(loadPartnerSessionKey(partnerId));
+    const stored = storedPartnerSessionKey(partnerId);
+    if (stored) {
+      setSessionKey(stored);
+      return;
+    }
+    // First visit from this origin (a new browser, or the desktop shell, which
+    // loads the UI from 127.0.0.1 rather than localhost): continue the
+    // conversation that is open on the server instead of starting another.
+    let cancelled = false;
+    void getPartnerSessions(partnerId)
+      .then((sessions) => latestOpenSessionKey(sessions) ?? freshPartnerSessionKey())
+      .catch(() => freshPartnerSessionKey())
+      .then((key) => {
+        if (cancelled) return;
+        persistPartnerSessionKey(partnerId, key);
+        setSessionKey(key);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [partnerId]);
   const changeSessionKey = useCallback(
     (key: string) => {
@@ -437,6 +458,7 @@ function PartnerDetail() {
           <div className="mx-auto h-full max-w-5xl overflow-hidden px-5 py-5">
             <PartnerArchives
               partnerId={partnerId}
+              activeSessionKey={sessionKey}
               onToast={setToast}
               onMessagesChange={setArchiveMessages}
               onResume={(key) => {

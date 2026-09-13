@@ -35,6 +35,16 @@ test("partner chat has a complete archive and resume surface", () => {
   assert.match(pageSource, /handleArchiveConversation/);
   assert.match(pageSource, /archivePartnerSession\(partnerId, sessionKey\)/);
   assert.match(pageSource, /changeSessionKey\(freshPartnerSessionKey\(\)\)/);
-  assert.match(archiveSource, /\.filter\(\s*\(session\) => session\.archived,/);
+  // Every conversation is listed — the active key is per browser origin, so
+  // an open conversation started from another origin (the desktop shell's
+  // 127.0.0.1 webview vs. localhost) must stay reachable here.
+  assert.doesNotMatch(archiveSource, /\.filter\(\s*\(session\) => session\.archived,/);
+  assert.match(archiveSource, /activeSessionKey/);
   assert.match(archiveSource, /resumePartnerSession/);
+});
+
+test("partner page adopts the server's open conversation on a fresh origin", () => {
+  assert.match(pageSource, /storedPartnerSessionKey\(partnerId\)/);
+  assert.match(pageSource, /latestOpenSessionKey\(sessions\)/);
+  assert.match(pageSource, /activeSessionKey=\{sessionKey\}/);
 });

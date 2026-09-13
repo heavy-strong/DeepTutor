@@ -43,11 +43,14 @@ function formatTime(value?: string) {
 
 export default function PartnerArchives({
   partnerId,
+  activeSessionKey = "",
   onToast,
   onMessagesChange,
   onResume,
 }: {
   partnerId: string;
+  /** The conversation the Chat tab is currently attached to. */
+  activeSessionKey?: string;
   onToast: (message: string) => void;
   /** Lifts the selected conversation up so the page header can export it.
    *  Empty array when nothing is selected (or while loading). */
@@ -71,9 +74,10 @@ export default function PartnerArchives({
   const loadSessions = useCallback(async () => {
     setLoadingSessions(true);
     try {
-      const next = (await getPartnerSessions(partnerId)).filter(
-        (session) => session.archived,
-      );
+      // Every conversation, archived or not. The active key is per browser
+      // origin, so an open conversation started elsewhere (another browser,
+      // the desktop shell) is only reachable from here.
+      const next = await getPartnerSessions(partnerId);
       setSessions(next);
       setSelectedKey((current) => {
         if (
@@ -168,7 +172,7 @@ export default function PartnerArchives({
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
             <h2 className="text-[13px] font-medium text-[var(--foreground)]">
-              {t("Archived conversations")}
+              {t("Conversations")}
             </h2>
             <p className="text-[11.5px] text-[var(--muted-foreground)]">
               {sessions.length
@@ -213,6 +217,11 @@ export default function PartnerArchives({
                     session.archived ? t("Archived") : t("New conversation"),
                   )}
                 </span>
+                {session.session_key === activeSessionKey ? (
+                  <span className="shrink-0 rounded bg-[var(--muted)] px-1.5 py-0.5 text-[10px] text-[var(--muted-foreground)]">
+                    {t("Current")}
+                  </span>
+                ) : null}
                 <span className="text-[11px] text-[var(--muted-foreground)]">
                   {session.message_count}
                 </span>
@@ -271,23 +280,28 @@ export default function PartnerArchives({
                     )}
                   </h3>
                   <p className="text-[11.5px] text-[var(--muted-foreground)]">
-                    {(selected.archived ? `${t("Archived")} · ` : "") +
-                      formatTime(selected.updated_at)}
+                    {(selected.archived
+                      ? `${t("Archived")} · `
+                      : selected.session_key === activeSessionKey
+                        ? `${t("Current")} · `
+                        : "") + formatTime(selected.updated_at)}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-md bg-[var(--muted)] px-2 py-1 text-[11px] text-[var(--muted-foreground)]">
                     {t("{{count}} messages", { count: selected.message_count })}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => void handleResume(selected)}
-                    title={t("Continue this conversation")}
-                    className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1 text-[11px] text-[var(--foreground)] hover:bg-[var(--muted)]"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    {t("Continue")}
-                  </button>
+                  {selected.session_key !== activeSessionKey ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleResume(selected)}
+                      title={t("Continue this conversation")}
+                      className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1 text-[11px] text-[var(--foreground)] hover:bg-[var(--muted)]"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      {t("Continue")}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => void handleDelete(selected)}

@@ -466,10 +466,12 @@ def _resolve_port_conflicts(
     frontend_port: int,
     check_frontend: bool,
     settings_dir: Path,
+    interactive: bool = True,
 ) -> tuple[int, int]:
     """Return free ``(backend_port, frontend_port)``, resolving conflicts interactively.
 
-    When stdin is not a TTY (Docker, CI), falls back to exiting with the
+    When stdin is not a TTY (Docker, CI) — or the caller says nobody is there
+    to answer (``interactive=False``) — falls back to exiting with the
     historical ``start.port_in_use`` message.
     """
     while True:
@@ -490,7 +492,7 @@ def _resolve_port_conflicts(
             for pid, command in entries:
                 _log(_t("start.port_conflict_proc", pid=pid, command=command))
 
-        if sys.stdin is None or not sys.stdin.isatty():
+        if not interactive or sys.stdin is None or not sys.stdin.isatty():
             joined = ", ".join(str(port) for _key, port in occupied)
             raise SystemExit(_t("start.port_in_use", ports=joined))
 
@@ -1283,6 +1285,10 @@ def start(
         frontend_port=frontend_port,
         check_frontend=existing_frontend is None,
         settings_dir=settings.settings_dir,
+        # A detached worker's stdin is a parent's pipe or NUL — on Windows the
+        # NUL device reports as a TTY, so without this the prompt is printed
+        # into the log and ``input()`` dies on EOF instead of a clear message.
+        interactive=not detached_worker,
     )
     if (resolved_backend, resolved_frontend) != (backend_port, frontend_port):
         backend_port, frontend_port = resolved_backend, resolved_frontend

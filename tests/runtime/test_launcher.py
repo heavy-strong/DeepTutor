@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+import io
 from pathlib import Path
 
 import pytest
@@ -212,6 +213,32 @@ def test_resolve_port_conflicts_non_tty_exits_with_message(tmp_path: Path, monke
             frontend_port=3784,
             check_frontend=True,
             settings_dir=tmp_path,
+        )
+
+    assert "8000" in str(excinfo.value)
+
+
+def test_resolve_port_conflicts_non_interactive_never_prompts(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A detached worker exits with the message even when stdin claims to be a TTY."""
+    monkeypatch.setattr(launcher, "_port_accepts_connection", lambda port: port == 8000)
+    monkeypatch.setattr(launcher, "_port_listeners", lambda port: [(123, "python uvicorn")])
+    monkeypatch.setattr(launcher.sys, "stdin", io.StringIO())
+    monkeypatch.setattr(launcher.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(
+        launcher,
+        "_prompt_conflict_choice",
+        lambda: pytest.fail("port-conflict prompt reached in non-interactive mode"),
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        launcher._resolve_port_conflicts(
+            backend_port=8000,
+            frontend_port=3784,
+            check_frontend=True,
+            settings_dir=tmp_path,
+            interactive=False,
         )
 
     assert "8000" in str(excinfo.value)
