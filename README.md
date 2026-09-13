@@ -310,6 +310,8 @@ deeptutor start --dev
 
 `deeptutor start` builds the local `web/` frontend for production once and reuses it; `--dev` runs Next.js with HMR. Config layout, ports, and `Ctrl+C` match Option 1.
 
+**Desktop window (Tauri):** prefer a native app window over a browser tab? `desktop/` holds a Tauri shell that runs `deeptutor start` for you and opens the Web UI in its own window (closing it stops both servers). With a Rust toolchain installed: `cd desktop && npm install && npm run dev` (or `npm run build` for an installer). See [desktop/README.md](desktop/README.md) for pointing it at a pip install or an already running instance.
+
 <details>
 <summary><b>Conda environment</b> (instead of <code>venv</code>)</summary>
 

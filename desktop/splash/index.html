@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeepTutor</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f7f5;
+        --fg: #1a1a1a;
+        --muted: #6b6b6b;
+        --panel: #ffffff;
+        --border: #e4e4e0;
+        --accent: #2563eb;
+        --danger: #b91c1c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111113;
+          --fg: #ececec;
+          --muted: #9a9a9a;
+          --panel: #1b1b1e;
+          --border: #2a2a2e;
+          --accent: #60a5fa;
+          --danger: #f87171;
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      main { width: min(720px, 100%); }
+      h1 {
+        font-size: 22px;
+        font-weight: 600;
+        margin: 0 0 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .spinner {
+        width: 16px; height: 16px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .failed .spinner { display: none; }
+      #message { margin: 0 0 16px; color: var(--muted); white-space: pre-wrap; }
+      .failed #message { color: var(--danger); }
+      dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 4px 12px;
+        margin: 0 0 16px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      dd { margin: 0; overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
+      dt { font-weight: 500; }
+      pre {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        margin: 0 0 16px;
+        max-height: 40vh;
+        overflow: auto;
+        font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        -webkit-user-select: text;
+        user-select: text;
+      }
+      .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+      button {
+        font: inherit;
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--fg);
+        cursor: pointer;
+      }
+      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1><span class="spinner"></span><span id="title">Starting DeepTutor…</span></h1>
+      <p id="message">Launching the local backend and Web UI.</p>
+      <dl>
+        <dt>Workspace</dt><dd id="home">–</dd>
+        <dt>Log</dt><dd id="log">–</dd>
+        <dt>Config</dt><dd id="config">–</dd>
+      </dl>
+      <pre id="lines" hidden></pre>
+      <div class="actions">
+        <button id="retry" class="primary" hidden>Retry</button>
+        <button id="open-log" hidden>Open log folder</button>
+        <button id="open-url" hidden>Open in browser</button>
+        <button id="toggle-lines">Show output</button>
+      </div>
+    </main>
+    <script>
+      (function () {
+        const tauri = window.__TAURI__;
+        const $ = (id) => document.getElementById(id);
+        let current = null;
+        let showLines = false;
+
+        function render(status) {
+          current = status;
+          document.body.classList.toggle("failed", status.phase === "failed");
+          $("title").textContent =
+            status.phase === "ready"
+              ? "Opening DeepTutor…"
+              : status.phase === "failed"
+                ? "DeepTutor could not start"
+                : status.attached
+                  ? "Connecting to DeepTutor…"
+                  : "Starting DeepTutor…";
+          $("message").textContent = status.message;
+          $("home").textContent = status.home || "–";
+          $("log").textContent = status.log_path || "–";
+          $("config").textContent = status.config_path || "–";
+          $("retry").hidden = status.phase !== "failed";
+          $("open-log").hidden = !status.log_path;
+          $("open-url").hidden = !status.url;
+          const lines = status.lines || [];
+          const pre = $("lines");
+          pre.textContent = lines.join("\n");
+          pre.hidden = !(showLines || status.phase === "failed") || lines.length === 0;
+          if (!pre.hidden) pre.scrollTop = pre.scrollHeight;
+        }
+
+        $("toggle-lines").addEventListener("click", () => {
+          showLines = !showLines;
+          $("toggle-lines").textContent = showLines ? "Hide output" : "Show output";
+          if (current) render(current);
+        });
+
+        if (!tauri) {
+          $("message").textContent =
+            "This page is the DeepTutor desktop boot screen and only works inside the desktop app.";
+          return;
+        }
+
+        $("retry").addEventListener("click", () => {
+          $("retry").disabled = true;
+          tauri.core.invoke("retry_runtime").finally(() => {
+            $("retry").disabled = false;
+          });
+        });
+        $("open-log").addEventListener("click", () => {
+          if (current && current.log_path) tauri.opener.revealItemInDir(current.log_path);
+        });
+        $("open-url").addEventListener("click", () => {
+          if (current && current.url) tauri.opener.openUrl(current.url);
+        });
+
+        tauri.event.listen("deeptutor:status", (event) => render(event.payload));
+        tauri.core.invoke("runtime_status").then(render).catch(() => {});
+      })();
+    </script>
+  </body>
+</html>

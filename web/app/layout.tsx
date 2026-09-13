@@ -3,6 +3,7 @@ import { Geist, Lora } from "next/font/google";
 import "./globals.css";
 import ThemeScript from "@/components/ThemeScript";
 import ToastViewport from "@/components/common/ToastViewport";
+import DesktopBridge from "@/components/desktop/DesktopBridge";
 import { AppShellProvider } from "@/context/AppShellContext";
 import { I18nClientBridge } from "@/i18n/I18nClientBridge";
 
@@ -54,6 +55,7 @@ export default function RootLayout({
         <AppShellProvider>
           <I18nClientBridge>{children}</I18nClientBridge>
           <ToastViewport />
+          <DesktopBridge />
         </AppShellProvider>
       </body>
     </html>
