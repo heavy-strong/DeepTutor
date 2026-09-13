@@ -1609,6 +1609,9 @@ async def fetch_models_from_provider(payload: FetchModelsPayload):
     """
     _require_settings_admin()
     from deeptutor.services.llm.factory import fetch_models as fetch_llm_models
+    from deeptutor.services.llm.local_model_info import fetch_local_model_infos
+    from deeptutor.services.llm.utils import is_local_llm_server
+    from deeptutor.services.provider_registry import canonical_provider_name
 
     base_url = (payload.base_url or "").strip()
     binding = (payload.binding or "").strip().lower() or "openai"
@@ -1632,6 +1635,13 @@ async def fetch_models_from_provider(payload: FetchModelsPayload):
             api_format = str(profile.get("api_format") or "")
 
     try:
+        if is_local_llm_server(base_url) and canonical_provider_name(binding) != "codebuddy":
+            # Local servers (Ollama, LM Studio, …) can also say what each
+            # model supports; the picker uses that to pre-fill capability
+            # overrides and the context window instead of leaving local
+            # models in the tools-off default.
+            infos = await fetch_local_model_infos(base_url, api_key, binding=binding)
+            return {"models": [info.as_dict() for info in infos]}
         model_ids = await fetch_llm_models(binding, base_url, api_key, api_format or "auto")
     except Exception as exc:  # noqa: BLE001 — surface any provider error as 502
         logger.exception("Failed to fetch models from %s", base_url)

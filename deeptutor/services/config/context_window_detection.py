@@ -16,8 +16,9 @@ from deeptutor.services.llm.context_window import (
     coerce_positive_int,
     default_context_window_for_model,
 )
+from deeptutor.services.llm.local_model_info import fetch_local_model_info
 from deeptutor.services.llm.openai_http_client import disable_ssl_verify_enabled
-from deeptutor.services.llm.utils import build_auth_headers
+from deeptutor.services.llm.utils import build_auth_headers, is_local_llm_server
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,11 @@ _KNOWN_CONTEXT_WINDOWS: tuple[tuple[str, int], ...] = (
 )
 
 
+# Below this, DeepTutor's system prompt plus a few tool results already fill
+# the window; local servers (Ollama defaults to 4096) commonly sit here.
+SMALL_LOCAL_CONTEXT_THRESHOLD = 16_384
+
+
 @dataclass(frozen=True)
 class ContextWindowDetectionResult:
     """Structured context-window detection output."""
@@ -50,6 +56,86 @@ class ContextWindowDetectionResult:
     source: str
     detail: str
     detected_at: str
+    #: Human-readable warning when the effective window is smaller than the
+    #: model could handle or too small for agentic use, with how to fix it.
+    advisory: str | None = None
+
+
+def _local_server_advisory(
+    *,
+    binding: str | None,
+    model: str,
+    model_window: int | None,
+    loaded_window: int | None,
+) -> str | None:
+    """Explain a too-small local context window and how to raise it."""
+    effective = loaded_window or model_window
+    if effective is None or effective >= SMALL_LOCAL_CONTEXT_THRESHOLD:
+        if loaded_window and model_window and loaded_window < model_window:
+            return (
+                f"The server runs `{model}` with a {loaded_window:,}-token context although the "
+                f"model supports {model_window:,}. Raise it if longer documents get truncated."
+            )
+        return None
+    if (binding or "").lower() == "ollama":
+        how = (
+            "Raise it by starting Ollama with `OLLAMA_CONTEXT_LENGTH=32768 ollama serve`, "
+            "or by creating a variant: `FROM {model}` + `PARAMETER num_ctx 32768` in a "
+            "Modelfile, then `ollama create {model}-32k -f Modelfile`. The OpenAI-compatible "
+            "endpoint DeepTutor uses cannot set it per request."
+        ).format(model=model)
+    else:
+        how = "Raise the context length in the server's model settings and reload the model."
+    return (
+        f"The effective context window for `{model}` is only {effective:,} tokens. DeepTutor's "
+        f"system prompt and tool results need more; answers will degrade or truncate. {how}"
+    )
+
+
+async def _detect_from_local_server(
+    llm_config: LLMConfig,
+    *,
+    on_log: Callable[[str], None] | None = None,
+) -> ContextWindowDetectionResult | None:
+    """Ask Ollama / LM Studio directly; their ``/v1/models`` carries no metadata."""
+    base_url = str(llm_config.base_url or llm_config.effective_url or "").strip()
+    if not base_url or not is_local_llm_server(base_url):
+        return None
+    info = await fetch_local_model_info(
+        base_url,
+        llm_config.model,
+        primary_api_key(llm_config.api_key),
+        binding=llm_config.binding,
+    )
+    if info is None:
+        if on_log is not None:
+            on_log("Local server exposed no model metadata; falling back to `/models`.")
+        return None
+    window = info.loaded_context_window or info.context_window
+    if not window:
+        return None
+    if on_log is not None and info.capabilities:
+        reported = ", ".join(
+            f"{key}={'yes' if value else 'no'}" for key, value in info.capabilities.items()
+        )
+        on_log(f"Server-reported capabilities for `{llm_config.model}`: {reported}.")
+    detected_at = datetime.now(timezone.utc).isoformat()
+    if info.loaded_context_window:
+        detail = f"Effective context length reported by the {info.source} server."
+    else:
+        detail = f"Model context length reported by the {info.source} server."
+    return ContextWindowDetectionResult(
+        context_window=window,
+        source="metadata",
+        detail=detail,
+        detected_at=detected_at,
+        advisory=_local_server_advisory(
+            binding=llm_config.binding,
+            model=llm_config.model,
+            model_window=info.context_window,
+            loaded_window=info.loaded_context_window,
+        ),
+    )
 
 
 def _model_aliases(model: str) -> set[str]:
@@ -188,6 +274,9 @@ async def detect_context_window(
 ) -> ContextWindowDetectionResult:
     """Detect the current model's context window or fall back to the runtime default."""
     detected_at = datetime.now(timezone.utc).isoformat()
+    local_result = await _detect_from_local_server(llm_config, on_log=on_log)
+    if local_result is not None:
+        return local_result
     metadata_window = await _detect_from_models_endpoint(llm_config, on_log=on_log)
     if metadata_window is not None:
         return ContextWindowDetectionResult(
@@ -218,4 +307,8 @@ async def detect_context_window(
     )
 
 
-__all__ = ["ContextWindowDetectionResult", "detect_context_window"]
+__all__ = [
+    "SMALL_LOCAL_CONTEXT_THRESHOLD",
+    "ContextWindowDetectionResult",
+    "detect_context_window",
+]

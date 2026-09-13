@@ -24,12 +24,22 @@ class UsageTracker:
     ``total_cost_usd`` via the pricing table in ``deeptutor.logging.stats``.
     """
 
-    def __init__(self, *, model: str | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        model: str | None = None,
+        binding: str | None = None,
+        base_url: str | None = None,
+    ) -> None:
         self.prompt_tokens: int = 0
         self.completion_tokens: int = 0
         self.total_tokens: int = 0
         self.calls: int = 0
         self.model: str | None = model
+        # Where the model is served decides whether tokens cost anything;
+        # left unset, the pricing table falls back to the active profile.
+        self.binding: str | None = binding
+        self.base_url: str | None = base_url
 
     def add_from_response(self, response_or_usage: Any) -> None:
         counts = token_counts(getattr(response_or_usage, "usage", None) or response_or_usage)
@@ -81,16 +91,22 @@ class UsageTracker:
         if self.calls == 0:
             return None
         cost_usd = 0.0
+        pricing_source = "unknown"
         if self.model:
             # Local import keeps ``core.agentic`` import-light at module load.
-            from deeptutor.logging.stats.llm_stats import get_pricing
+            from deeptutor.logging.stats.llm_stats import resolve_pricing
 
-            pricing = get_pricing(self.model)
+            pricing, pricing_source = resolve_pricing(
+                self.model, binding=self.binding, base_url=self.base_url
+            )
             cost_usd = (self.prompt_tokens / 1000.0) * pricing.get("input", 0.0) + (
                 self.completion_tokens / 1000.0
             ) * pricing.get("output", 0.0)
         return {
             "total_cost_usd": cost_usd,
+            # "local" (self-hosted, free), "table" (priced), "unknown" (no
+            # rate on file - the UI hides the dollar figure).
+            "pricing_source": pricing_source,
             "total_tokens": self.total_tokens,
             "total_calls": self.calls,
             "prompt_tokens": self.prompt_tokens,

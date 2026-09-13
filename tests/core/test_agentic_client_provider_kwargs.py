@@ -591,6 +591,25 @@ def test_local_and_github_copilot_backends_stay_opted_out_of_native_tools() -> N
         "github_copilot",
     ):
         assert can_use_native_tool_calling(binding=binding, model=None) is False, binding
+        # An unknown model id keeps the opt-out; the binding alone says nothing.
+        assert can_use_native_tool_calling(binding=binding, model="mystery-7b") is False, binding
+
+
+def test_local_backends_enable_native_tools_for_known_model_families() -> None:
+    # Families with a tool-calling chat template work on every local server;
+    # families without one stay in prose mode. Both paths are name-based
+    # because local servers serve whatever the user pulled.
+    for binding in ("ollama", "vllm", "lm_studio", "llama_cpp", "lemonade", "ovms"):
+        assert can_use_native_tool_calling(binding=binding, model="qwen3:8b") is True, binding
+        assert can_use_native_tool_calling(binding=binding, model="llama3:8b") is False, binding
+    # Server-reported or user-declared overrides still win over the heuristic.
+    from deeptutor.services.llm.capabilities import set_catalog_capability_overrides
+
+    set_catalog_capability_overrides([("ollama", "qwen3:8b", {"tools": False})])
+    try:
+        assert can_use_native_tool_calling(binding="ollama", model="qwen3:8b") is False
+    finally:
+        set_catalog_capability_overrides([])
 
 
 def test_unknown_binding_does_not_enable_native_tools() -> None:

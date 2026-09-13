@@ -284,6 +284,8 @@ class ConfigTestRunner:
             detail=detection.detail,
             detected_at=detection.detected_at,
         )
+        if detection.advisory:
+            run.emit("warning", detection.advisory)
         run.emit(
             "info",
             "Context window detection is available in Settings and was not written automatically.",

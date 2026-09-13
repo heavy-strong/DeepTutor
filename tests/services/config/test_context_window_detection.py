@@ -168,3 +168,90 @@ def test_models_endpoint_probe_honors_disable_ssl_verify(monkeypatch) -> None:
     assert captured["url"] == "https://api.example.com/v1/models"
     assert captured["connector_kwargs"] == {"ssl": False}
     assert isinstance(captured["session_kwargs"]["connector"], FakeConnector)
+
+
+def test_detect_context_window_prefers_local_server_metadata(monkeypatch) -> None:
+    from deeptutor.services.llm.local_model_info import LocalModelInfo
+
+    async def fake_local(*_args, **_kwargs):
+        return LocalModelInfo(
+            id="qwen3:8b",
+            capabilities={"tools": True},
+            context_window=40960,
+            loaded_context_window=4096,
+            source="ollama",
+        )
+
+    monkeypatch.setattr(detection_module, "fetch_local_model_info", fake_local)
+    monkeypatch.setattr(
+        "deeptutor.services.config.context_window_detection._detect_from_models_endpoint",
+        _metadata_128k,
+    )
+    logs: list[str] = []
+    result = asyncio.run(
+        detect_context_window(
+            _config(
+                model="qwen3:8b",
+                base_url="http://localhost:11434/v1",
+                effective_url="http://localhost:11434/v1",
+                binding="ollama",
+                provider_name="ollama",
+            ),
+            on_log=logs.append,
+        )
+    )
+
+    # The effective (loaded) window wins over the trained maximum.
+    assert result.context_window == 4096
+    assert result.source == "metadata"
+    assert result.advisory is not None
+    assert "OLLAMA_CONTEXT_LENGTH" in result.advisory
+    assert "4,096" in result.advisory
+    assert any("tools=yes" in line for line in logs)
+
+
+def test_detect_context_window_local_no_advisory_when_window_is_large(monkeypatch) -> None:
+    from deeptutor.services.llm.local_model_info import LocalModelInfo
+
+    async def fake_local(*_args, **_kwargs):
+        return LocalModelInfo(id="qwen3:8b", context_window=40960, source="ollama")
+
+    monkeypatch.setattr(detection_module, "fetch_local_model_info", fake_local)
+    result = asyncio.run(
+        detect_context_window(
+            _config(
+                model="qwen3:8b",
+                base_url="http://localhost:11434/v1",
+                effective_url="http://localhost:11434/v1",
+                binding="ollama",
+                provider_name="ollama",
+            )
+        )
+    )
+
+    assert result.context_window == 40960
+    assert result.advisory is None
+
+
+def test_detect_context_window_local_falls_through_when_server_silent(monkeypatch) -> None:
+    async def fake_local(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(detection_module, "fetch_local_model_info", fake_local)
+    monkeypatch.setattr(
+        "deeptutor.services.config.context_window_detection._detect_from_models_endpoint",
+        _metadata_none,
+    )
+    result = asyncio.run(
+        detect_context_window(
+            _config(
+                model="mystery",
+                base_url="http://localhost:8000/v1",
+                effective_url="http://localhost:8000/v1",
+                binding="vllm",
+                provider_name="vllm",
+            )
+        )
+    )
+
+    assert result.source == "default"

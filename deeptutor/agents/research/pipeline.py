@@ -467,7 +467,11 @@ class ResearchPipeline:
         )
 
         self.registry = get_tool_registry()
-        self.usage = UsageTracker(model=self.model)
+        self.usage = UsageTracker(
+            model=self.model,
+            binding=self.binding,
+            base_url=getattr(self.llm_config, "base_url", None),
+        )
 
         # Default sampling temperature — slightly higher than solve so
         # the research loop can take initiative on APPEND decisions.

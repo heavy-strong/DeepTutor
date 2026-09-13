@@ -69,14 +69,22 @@ def count_tokens_with_litellm(messages: list[dict], model_name: str) -> dict[str
 
 
 def get_model_pricing(model_name: str) -> dict[str, float]:
+    """Per-1K pricing; zero for local endpoints and models without a rate."""
+    from deeptutor.logging.stats.llm_stats import ZERO_PRICING, resolve_pricing
+
+    pricing, source = resolve_pricing(model_name)
+    if source == "local":
+        return pricing
+    # This module's own table (DeepSeek v4 tiers etc.) still applies, exact
+    # match first, then fuzzy; otherwise whatever the shared table decided
+    # (which is zero for an unknown model, never a stand-in vendor rate).
     if model_name in MODEL_PRICING:
         return MODEL_PRICING[model_name]
-    # Fuzzy matching
     lower = model_name.lower()
     for key, val in MODEL_PRICING.items():
         if key in lower or lower in key:
             return val
-    return MODEL_PRICING["gpt-4o-mini"]
+    return pricing if source == "table" else ZERO_PRICING
 
 
 def calculate_cost(model_name: str, prompt_tokens: int, completion_tokens: int) -> float:

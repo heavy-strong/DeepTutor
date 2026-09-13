@@ -29,6 +29,23 @@ def test_declared_capability_wins_over_static_tables() -> None:
     assert supports_vision("ollama", "llama3") is True
     # Untouched capabilities and other models keep the table answer.
     assert supports_response_format("ollama", "llama3") is True
+    assert supports_tools("ollama", "some-unknown-model") is False
+
+
+def test_local_bindings_consult_model_family_heuristic() -> None:
+    # The provider rows for local servers say "tools off, vision off"; a model
+    # id naming a well-known family lifts that, an unknown id keeps it.
+    assert supports_tools("ollama", "mistral") is True
+    assert supports_tools("lm_studio", "qwen3-8b") is True
+    assert supports_tools("ollama", "llama3:8b") is False
+    assert supports_tools("ollama", "some-unknown-model") is False
+    assert supports_vision("ollama", "llava:7b") is True
+    assert supports_vision("ollama", "gemma3:1b") is False
+    # Cloud bindings are untouched by the heuristic (their row already decides).
+    assert supports_vision("openai", "llava:7b") is True  # MODEL_OVERRIDES, not heuristic
+    assert supports_tools("deepseek", "llama3:8b") is True
+    # A declared override still beats the heuristic.
+    set_catalog_capability_overrides([("ollama", "mistral", {"tools": False})])
     assert supports_tools("ollama", "mistral") is False
 
 

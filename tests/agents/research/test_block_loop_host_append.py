@@ -237,7 +237,8 @@ async def test_block_host_allows_finish_when_model_cannot_call_native_tools(
         registry=registry,
         enabled_tools=["web_search"],
         binding="ollama",
-        model="llama3.2",
+        # Outside the known tool-capable families, so the local opt-out holds.
+        model="mystery-local-8b",
     )
     queue = DynamicTopicQueue("t", max_length=5)
     queue.add_block("Parent topic", "")

@@ -747,8 +747,10 @@ def can_use_native_tool_calling(
     1. Native provider adapters backed by Anthropic or OpenAI Codex support tools.
     2. Local OpenAI-compatible servers (Ollama, vLLM, LM Studio, llama.cpp,
        Lemonade, OVMS, …) and anything in ``_NATIVE_TOOL_BLOCKED_BINDINGS`` are
-       opted out — tool support there depends on the loaded model and is
-       unreliable, so the loop falls back to prose.
+       opted out unless the model id names a family known to handle native
+       tools (the local-binding heuristic inside ``supports_tools``) — tool support
+       there depends on the loaded model, so an unknown model falls back to
+       prose.
     3. An explicit ``supports_tools`` capability (provider- or model-level) wins.
     4. Otherwise a registered *cloud* OpenAI-compatible provider is assumed
        tool-capable — function calling is part of that API contract, matching
@@ -767,7 +769,14 @@ def can_use_native_tool_calling(
     if spec and backend in _NATIVE_TOOL_BACKENDS:
         return True
     if binding in _NATIVE_TOOL_BLOCKED_BINDINGS or (spec and spec.is_local):
-        return False
+        # Local servers serve whatever the user pulled, so the binding alone
+        # says nothing — but the model id usually does. ``supports_tools``
+        # consults the model-family heuristic for local bindings (Qwen3,
+        # Llama 3.1+, Mistral, gpt-oss, … → True; unknown → the provider
+        # row's False), and the picker-detected override above already wins
+        # for anything the server itself reported. Anthropic-style bindings
+        # stay opted out: their tool wire format is not OpenAI's.
+        return bool(spec and spec.is_local) and supports_tools(binding, model)
     if supports_tools(binding, model):
         return True
     return bool(spec and backend == "openai_compat")

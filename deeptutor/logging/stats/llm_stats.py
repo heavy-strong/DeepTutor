@@ -40,13 +40,80 @@ MODEL_PRICING = {
 }
 
 
-def get_pricing(model: str) -> dict[str, float]:
-    """Get pricing for a model (fuzzy match)."""
-    model_lower = model.lower()
+ZERO_PRICING: dict[str, float] = {"input": 0.0, "output": 0.0}
+
+
+def _table_pricing(model: str) -> dict[str, float] | None:
+    model_lower = (model or "").lower()
+    if not model_lower:
+        return None
     for key, pricing in MODEL_PRICING.items():
         if key in model_lower or model_lower in key:
             return pricing
-    return MODEL_PRICING.get("gpt-4o-mini", {"input": 0.00015, "output": 0.0006})
+    return None
+
+
+def is_zero_cost_endpoint(binding: str | None, base_url: str | None) -> bool:
+    """True for self-hosted servers (Ollama, LM Studio, vLLM, ...) with no per-token bill."""
+    # Local imports: this module is loaded by ``deeptutor.logging`` early.
+    from deeptutor.services.llm.utils import is_local_llm_server
+    from deeptutor.services.provider_registry import find_by_name
+
+    spec = find_by_name(binding) if binding else None
+    if spec is not None and spec.is_local:
+        return True
+    return bool(base_url) and is_local_llm_server(base_url or "")
+
+
+def _active_endpoint_for(model: str) -> tuple[str | None, str | None]:
+    """Binding / base URL of the active LLM profile when it serves *model*."""
+    try:
+        from deeptutor.services.llm.config import get_llm_config
+
+        config = get_llm_config()
+    except Exception:  # noqa: BLE001 - pricing is best effort, never fatal
+        return None, None
+    if (getattr(config, "model", "") or "").lower() != (model or "").lower():
+        return None, None
+    return getattr(config, "binding", None), getattr(config, "base_url", None)
+
+
+def resolve_pricing(
+    model: str,
+    *,
+    binding: str | None = None,
+    base_url: str | None = None,
+) -> tuple[dict[str, float], str]:
+    """Per-1K-token pricing for *model* and where the answer came from.
+
+    Returns ``(pricing, source)`` with ``source`` one of:
+
+    * ``"local"`` - the model is served by a local/self-hosted endpoint; zero.
+    * ``"table"`` - matched :data:`MODEL_PRICING`.
+    * ``"unknown"`` - no entry; zero rather than a made-up vendor rate, so a
+      Qwen on Ollama or a gateway model never shows a fictitious bill.
+
+    When *binding*/*base_url* are not given, the active LLM profile is used
+    if it is the one serving *model*.
+    """
+    if binding is None and base_url is None:
+        binding, base_url = _active_endpoint_for(model)
+    if is_zero_cost_endpoint(binding, base_url):
+        return ZERO_PRICING, "local"
+    table = _table_pricing(model)
+    if table is not None:
+        return table, "table"
+    return ZERO_PRICING, "unknown"
+
+
+def get_pricing(
+    model: str,
+    *,
+    binding: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, float]:
+    """Pricing for a model; zero for local endpoints and unknown models."""
+    return resolve_pricing(model, binding=binding, base_url=base_url)[0]
 
 
 def estimate_tokens(text: str) -> int:
@@ -94,6 +161,8 @@ class LLMStats:
         system_prompt: Optional[str] = None,
         user_prompt: Optional[str] = None,
         response: Optional[str] = None,
+        binding: Optional[str] = None,
+        base_url: Optional[str] = None,
     ):
         """
         Add an LLM call to the stats.
@@ -105,6 +174,8 @@ class LLMStats:
             system_prompt: System prompt text (for estimation)
             user_prompt: User prompt text (for estimation)
             response: Response text (for estimation)
+            binding: Provider binding; local servers are billed at zero
+            base_url: Endpoint URL, used the same way when binding is unknown
         """
         # Estimate tokens if not provided
         if prompt_tokens is None and (system_prompt or user_prompt):
@@ -118,7 +189,7 @@ class LLMStats:
         completion_tokens = completion_tokens or 0
 
         # Calculate cost
-        pricing = get_pricing(model)
+        pricing = get_pricing(model, binding=binding, base_url=base_url)
         cost = (prompt_tokens / 1000.0) * pricing["input"] + (completion_tokens / 1000.0) * pricing[
             "output"
         ]

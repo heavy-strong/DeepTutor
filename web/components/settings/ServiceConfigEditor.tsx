@@ -37,6 +37,7 @@ import {
   type CatalogModel,
   type CatalogProfile,
   type LlmContextWindowDetection,
+  type ModelCapabilities,
   type ModelCapabilityKey,
   type ProviderOption,
   type ServiceName,
@@ -83,6 +84,15 @@ const API_FORMAT_HINTS: Record<string, string> = {
   anthropic: "Send every request as Anthropic Messages (/v1/messages).",
 };
 const LLM_SHAPED = new Set<ServiceName>(["llm", "task"]);
+// Registered local OpenAI-compatible servers (mirrors ProviderSpec.is_local).
+const LOCAL_SERVER_BINDINGS = new Set([
+  "ollama",
+  "lm_studio",
+  "vllm",
+  "llama_cpp",
+  "lemonade",
+  "ovms",
+]);
 
 const SERVICE_LABEL: Record<ServiceName, string> = {
   llm: "LLM",
@@ -1072,8 +1082,9 @@ export function ServiceConfigEditor({ service }: { service: ServiceName }) {
                 profile={openedProfile}
                 existing={openedProfile.models.map((model) => model.model)}
                 onClose={() => setPickerOpen(false)}
-                onAdd={(ids) => {
+                onAdd={(picked) => {
                   const profileId = openedProfile.id;
+                  const detectedAt = new Date().toISOString();
                   mutateCatalog((next) => {
                     const target = next.services[service];
                     const profile = target.profiles.find(
@@ -1083,13 +1094,33 @@ export function ServiceConfigEditor({ service }: { service: ServiceName }) {
                     const present = new Set(
                       profile.models.map((model) => model.model),
                     );
-                    ids
-                      .filter((id) => !present.has(id))
-                      .forEach((id, index) => {
+                    picked
+                      .filter((item) => !present.has(item.id))
+                      .forEach((item, index) => {
+                        // Local servers report tools/vision per model; write
+                        // those as declared overrides so the runtime does not
+                        // fall back to the tools-off default for local bindings.
+                        const capabilities: ModelCapabilities = {};
+                        if (typeof item.capabilities?.tools === "boolean")
+                          capabilities.tools = item.capabilities.tools;
+                        if (typeof item.capabilities?.vision === "boolean")
+                          capabilities.vision = item.capabilities.vision;
+                        const window =
+                          item.loaded_context_window ?? item.context_window;
                         profile.models.push({
                           id: `${service}-model-${Date.now()}-${index}`,
-                          name: id,
-                          model: id,
+                          name: item.id,
+                          model: item.id,
+                          ...(Object.keys(capabilities).length > 0
+                            ? { capabilities }
+                            : {}),
+                          ...(window
+                            ? {
+                                context_window: String(window),
+                                context_window_source: "metadata",
+                                context_window_detected_at: detectedAt,
+                              }
+                            : {}),
                         });
                       });
                     if (
@@ -1102,7 +1133,9 @@ export function ServiceConfigEditor({ service }: { service: ServiceName }) {
                     }
                   });
                   setPickerOpen(false);
-                  setToast(t("Added {{count}} models.", { count: ids.length }));
+                  setToast(
+                    t("Added {{count}} models.", { count: picked.length }),
+                  );
                 }}
               />
             )}
@@ -1653,6 +1686,14 @@ function ProfileFields({
               {t("Required — without it, search falls back to DuckDuckGo.")}
             </p>
           )}
+          {LLM_SHAPED.has(service) &&
+            LOCAL_SERVER_BINDINGS.has(profile.binding ?? "") && (
+              <p className="mt-1.5 text-[11px] text-[var(--muted-foreground)]">
+                {t(
+                  "Local server: no API key needed. Start it, then use List models — Ollama and LM Studio report tool/vision support and context size per model. Ollama defaults to a 4K context; raise it with OLLAMA_CONTEXT_LENGTH.",
+                )}
+              </p>
+            )}
         </div>
       )}
       {fields.apiKey && (

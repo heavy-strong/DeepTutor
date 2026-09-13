@@ -436,7 +436,11 @@ class QuestionPipeline:
         )
 
         self.registry = get_tool_registry()
-        self.usage = UsageTracker(model=self.model)
+        self.usage = UsageTracker(
+            model=self.model,
+            binding=self.binding,
+            base_url=getattr(self.llm_config, "base_url", None),
+        )
         self._optional_tools = default_optional_tools()
         self._temperature = 0.4
 

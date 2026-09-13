@@ -14,6 +14,35 @@ import type {
 import { inputClass } from "./shared";
 
 /**
+ * One row of `/api/settings/fetch-models`. Local servers (Ollama, LM Studio)
+ * also report what a model supports; the caller writes those into the
+ * catalog model as capability overrides so a freshly added local model is
+ * not stuck in the tools-off default.
+ */
+export type FetchedModel = {
+  id: string;
+  name?: string;
+  capabilities?: { tools?: boolean; vision?: boolean; thinking?: boolean };
+  context_window?: number;
+  loaded_context_window?: number;
+  source?: string;
+};
+
+function capabilityBadges(
+  model: FetchedModel | undefined,
+  t: (key: string) => string,
+): string[] {
+  if (!model) return [];
+  const badges: string[] = [];
+  if (model.capabilities?.tools) badges.push(t("Tools"));
+  if (model.capabilities?.vision) badges.push(t("Vision"));
+  if (model.capabilities?.thinking) badges.push(t("Thinking"));
+  const window = model.loaded_context_window ?? model.context_window;
+  if (window) badges.push(`${Math.round(window / 1024)}k`);
+  return badges;
+}
+
+/**
  * Lists what an endpoint serves and lets the user pick which ids to add.
  *
  * Adding, not replacing: the models already under a provider are the user's
@@ -31,17 +60,25 @@ export function ModelListPicker({
   service: Extract<ServiceName, "llm" | "task">;
   profile: CatalogProfile;
   existing: string[];
-  onAdd: (ids: string[]) => void;
+  onAdd: (models: FetchedModel[]) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const [ids, setIds] = useState<string[]>([]);
+  const [fetchedModels, setFetchedModels] = useState<FetchedModel[]>([]);
+  const ids = useMemo(
+    () => fetchedModels.map((item) => item.id),
+    [fetchedModels],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const present = useMemo(() => new Set(existing), [existing]);
+  const byId = useMemo(
+    () => new Map(fetchedModels.map((item) => [item.id, item])),
+    [fetchedModels],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -62,15 +99,15 @@ export function ModelListPicker({
           }),
         });
         const payload = (await response.json().catch(() => ({}))) as {
-          models?: { id: string }[];
+          models?: FetchedModel[];
           detail?: string;
         };
         if (!response.ok) {
           throw new Error(payload.detail || `HTTP ${response.status}`);
         }
-        const fetched = (payload.models ?? []).map((item) => item.id);
+        const fetched = (payload.models ?? []).filter((item) => item?.id);
         if (cancelled) return;
-        setIds(fetched);
+        setFetchedModels(fetched);
         if (fetched.length === 0)
           setError(t("The provider returned no models."));
       } catch (caught) {
@@ -132,7 +169,9 @@ export function ModelListPicker({
           <button
             type="button"
             disabled={selected.size === 0}
-            onClick={() => onAdd([...selected])}
+            onClick={() =>
+              onAdd(fetchedModels.filter((item) => selected.has(item.id)))
+            }
             className="inline-flex h-8 items-center rounded-lg bg-[var(--foreground)] px-3.5 text-[12px] font-medium text-[var(--background)] transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             {t("Add selected ({{count}})", { count: selected.size })}
@@ -169,6 +208,7 @@ export function ModelListPicker({
             {visible.map((id, index) => {
               const added = present.has(id);
               const checked = selected.has(id);
+              const badges = capabilityBadges(byId.get(id), t);
               return (
                 <button
                   key={id}
@@ -192,6 +232,18 @@ export function ModelListPicker({
                   <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-[var(--foreground)]">
                     {id}
                   </span>
+                  {badges.length > 0 && (
+                    <span className="hidden shrink-0 items-center gap-1 sm:flex">
+                      {badges.map((badge) => (
+                        <span
+                          key={badge}
+                          className="rounded border border-[var(--border)] px-1.5 py-0.5 text-[10px] leading-none text-[var(--muted-foreground)]"
+                        >
+                          {badge}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                   {added && (
                     <span className="shrink-0 text-[11px] text-[var(--muted-foreground)]">
                       {t("Already added")}

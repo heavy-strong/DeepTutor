@@ -25,7 +25,9 @@ from deeptutor.services.llm.capabilities import set_catalog_capability_overrides
 import deeptutor.services.llm.config as llm_config_module
 
 _LOCAL_BINDING = "lm_studio"
-_LOCAL_MODEL = "deepseek-r1-distill-qwen-32b"
+# A model id outside the known tool-capable families: local bindings only
+# get native tools when the family (Qwen3, Llama 3.1+, …) is known to work.
+_LOCAL_MODEL = "mystery-local-32b"
 
 
 class _PipelineWithoutSubmission:

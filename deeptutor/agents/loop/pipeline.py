@@ -247,7 +247,7 @@ class AgenticLoopPipeline:
         # Process-wide registry. Stays the base for the whole turn; the
         # per-turn scoped view lives on ``_tool_view`` (see ``tool_lookup``).
         self.registry: ToolLookup = get_tool_registry()
-        self._usage = UsageTracker(model=self.model)
+        self._usage = UsageTracker(model=self.model, binding=self.binding, base_url=self.base_url)
         self._tool_view: ProviderToolView | None = None
         self._deferred_loader: DeferredToolLoader | None = None
         self._deferred_pool: list[Any] = []

@@ -794,10 +794,14 @@ function CostFooter({
   cost,
   tokens,
   calls,
+  pricingSource,
 }: {
   cost: number;
   tokens: number;
   calls: number;
+  // "local": self-hosted, free. "unknown": no rate on file, so no dollar
+  // figure is shown rather than a fictitious one. "table": priced.
+  pricingSource?: string;
 }) {
   const { t } = useTranslation();
   const formatCost = (usd: number) => {
@@ -811,8 +815,17 @@ function CostFooter({
   return (
     <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted-foreground)]/70">
       <Coins size={11} strokeWidth={1.5} className="shrink-0" />
-      <span>{formatCost(cost)}</span>
-      <span className="opacity-50">·</span>
+      {pricingSource === "local" ? (
+        <>
+          <span>{t("local")}</span>
+          <span className="opacity-50">·</span>
+        </>
+      ) : pricingSource === "unknown" ? null : (
+        <>
+          <span>{formatCost(cost)}</span>
+          <span className="opacity-50">·</span>
+        </>
+      )}
       <span>
         {formatTokens(tokens)} {t("tokens")}
       </span>
@@ -1597,6 +1610,7 @@ export const ChatMessageList = memo(function ChatMessageList({
           const cs = meta?.cost_summary as
             | {
                 total_cost_usd?: number;
+                pricing_source?: string;
                 total_tokens?: number;
                 total_calls?: number;
               }
@@ -1716,6 +1730,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                   <div className="ml-auto">
                     <CostFooter
                       cost={costSummary.total_cost_usd ?? 0}
+                      pricingSource={costSummary.pricing_source}
                       tokens={costSummary.total_tokens ?? 0}
                       calls={costSummary.total_calls ?? 0}
                     />

@@ -445,6 +445,8 @@ Then in **Settings → Models**, point the provider Base URL at `host.docker.int
 - llama.cpp: `http://host.docker.internal:8080/v1`
 - Lemonade: `http://host.docker.internal:13305/api/v1`
 
+For model choice, context-window sizing (Ollama defaults to 4K, which is too small for the agent loop) and capability auto-detection, see [docs/local-models.md](./docs/local-models.md).
+
 Docker Desktop (macOS/Windows) usually resolves `host.docker.internal` without `--add-host`. On Linux, the flag is the portable way to create that hostname on modern Docker Engine.
 
 **Linux alternative — host networking:** add `--network=host` and drop the `-p` flags. The container shares the host network directly, so open [http://127.0.0.1:3782](http://127.0.0.1:3782) (or the `frontend_port` in `system.json`), and host services can be reached with normal localhost URLs like `http://127.0.0.1:11434/v1`. Note that host networking exposes container ports directly on the host and may conflict with existing services — to keep them on loopback, set `BACKEND_HOST=127.0.0.1` and `FRONTEND_HOST=127.0.0.1` (see [CONTAINERIZATION.md](./CONTAINERIZATION.md)).

@@ -256,6 +256,16 @@ PROVIDER_CAPABILITIES: dict[str, dict[str, object]] = {
     },
 }
 
+# Local bindings whose per-model answer comes from the model-family heuristic
+# in :mod:`local_model_info` when neither the catalog nor MODEL_OVERRIDES say.
+LOCAL_HEURISTIC_BINDINGS: frozenset[str] = frozenset(
+    {"ollama", "lm_studio", "vllm", "llama_cpp", "lemonade", "ovms"}
+)
+_LOCAL_HEURISTIC_CAPABILITIES: dict[str, str] = {
+    "supports_tools": "tools",
+    "supports_vision": "vision",
+}
+
 # Default capabilities for unknown providers (assume OpenAI-compatible)
 DEFAULT_CAPABILITIES: dict[str, object] = {
     "supports_response_format": True,
@@ -466,6 +476,18 @@ def _static_capability(
             if model_lower.startswith(pattern):
                 if capability in overrides:
                     return overrides[capability]
+
+    # 1b. Local servers serve whatever the user pulled, so the provider row
+    #     below ("tools off, vision off") is only a floor. A model id naming a
+    #     family with a known answer (Qwen3 tools, LLaVA vision, …) beats it.
+    if model and binding_lower in LOCAL_HEURISTIC_BINDINGS:
+        heuristic_key = _LOCAL_HEURISTIC_CAPABILITIES.get(capability)
+        if heuristic_key is not None:
+            from .local_model_info import infer_capabilities_from_name
+
+            guess = infer_capabilities_from_name(model).get(heuristic_key)
+            if guess is not None:
+                return guess
 
     # 2. Check provider capabilities
     provider_caps = PROVIDER_CAPABILITIES.get(binding_lower, {})
