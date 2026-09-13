@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiFetch, apiUrl } from "@/lib/api";
+import { micConstraints } from "@/lib/voice-devices";
 import { stripAudioMimeParameters } from "@/lib/voice-mime";
 
 export type RecorderState = "idle" | "recording" | "transcribing";
@@ -39,7 +40,9 @@ export function useVoiceRecorder(onTranscript: (text: string) => void) {
     }
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: micConstraints(),
+      });
     } catch {
       setError("Microphone permission denied.");
       return;

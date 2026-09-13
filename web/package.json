@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
-    "predev": "node ./scripts/copy-pdfjs-assets.mjs",
+    "predev": "node ./scripts/copy-pdfjs-assets.mjs && node ./scripts/copy-vad-assets.mjs",
     "dev:turbo": "node ./scripts/dev.mjs --turbopack",
-    "predev:turbo": "node ./scripts/copy-pdfjs-assets.mjs",
+    "predev:turbo": "node ./scripts/copy-pdfjs-assets.mjs && node ./scripts/copy-vad-assets.mjs",
     "build": "node ./scripts/build.mjs",
     "start": "next start",
     "lint": "eslint .",
@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@recogito/text-annotator": "4.2.5",
+    "@ricky0123/vad-web": "^0.0.31",
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
     "cytoscape": "^3.33.1",

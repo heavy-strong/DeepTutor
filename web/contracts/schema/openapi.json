@@ -9806,6 +9806,51 @@
         "title": "VoiceAutoplayUpdate",
         "type": "object"
       },
+      "VoiceHandsfreeUpdate": {
+        "properties": {
+          "voice_handsfree_send_delay_ms": {
+            "anyOf": [
+              {
+                "maximum": 15000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Handsfree Send Delay Ms"
+          },
+          "voice_handsfree_silence_ms": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 300.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Handsfree Silence Ms"
+          }
+        },
+        "title": "VoiceHandsfreeUpdate",
+        "type": "object"
+      },
+      "VoiceReplyToVoiceUpdate": {
+        "properties": {
+          "voice_reply_to_voice": {
+            "title": "Voice Reply To Voice",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "voice_reply_to_voice"
+        ],
+        "title": "VoiceReplyToVoiceUpdate",
+        "type": "object"
+      },
       "WebSourceInfo": {
         "properties": {
           "added_at": {
@@ -45431,6 +45476,154 @@
           }
         },
         "summary": "Update Voice Autoplay",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/voice-handsfree": {
+      "put": {
+        "description": "Persist the hands-free listening timings; only the fields sent change.",
+        "operationId": "update_voice_handsfree_api_settings_voice_handsfree_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "dt_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dt Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceHandsfreeUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Voice Handsfree",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/voice-reply-to-voice": {
+      "put": {
+        "description": "Persist whether a mic-dictated question gets its reply read aloud.\n\nIndependent of ``voice_autoplay``: that one speaks every reply, this one\nonly the replies to questions the user asked by voice.",
+        "operationId": "update_voice_reply_to_voice_api_settings_voice_reply_to_voice_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "dt_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dt Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceReplyToVoiceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Voice Reply To Voice",
         "tags": [
           "settings"
         ]

@@ -46,6 +46,7 @@ from deeptutor.services.partners.interaction import (
     session_store_for,
 )
 from deeptutor.services.partners.links import linked_user_id
+from deeptutor.services.partners.model_runtime import effective_partner_llm_selections
 from deeptutor.services.partners.scope import partner_user
 from deeptutor.services.partners.sessions import PartnerSessionStore, conversation_scope
 from deeptutor.services.partners.workspace import ensure_partner_workspace, read_soul
@@ -339,8 +340,9 @@ class PartnerRunner:
         options: PartnerTurnOptions | None = None,
     ) -> tuple[str, list[dict[str, Any]]]:
         ensure_partner_workspace(self.partner_id)
-        primary = getattr(self.config, "llm_selection", None) or None
-        backup = getattr(self.config, "backup_llm_selection", None) or None
+        # Stored selections are catalog ids that can go stale after a model is
+        # re-saved in Settings; resolve them to what is actually runnable.
+        primary, backup = effective_partner_llm_selections(self.config)
 
         final_text, errors, events = await self._execute_turn(
             msg,

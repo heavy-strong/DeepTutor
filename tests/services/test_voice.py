@@ -35,6 +35,7 @@ from deeptutor.services.voice.base import (
     join_audio_path,
     normalize_stt_content_type,
     strip_markdown_for_speech,
+    strip_unspoken,
 )
 from deeptutor.services.voice.config import STTConfig, TTSConfig
 
@@ -115,6 +116,38 @@ def test_strip_markdown_drops_code_and_unwraps_links() -> None:
     assert "Title" in out and "Hello world" in out and "the docs" in out
     assert "print(1)" not in out  # fenced code dropped
     assert "**" not in out and "[" not in out and "#" not in out
+
+
+def test_strip_unspoken_removes_emoji_laughter_and_filler() -> None:
+    out = strip_markdown_for_speech(
+        "안녕하세요! 😊 오늘 기분이 어때요? ㅋㅋㅋ 음... 그러니까 **핵심**은 이거예요 ✨"
+    )
+    assert out == "안녕하세요! 오늘 기분이 어때요? 그러니까 핵심은 이거예요"
+
+    out = strip_markdown_for_speech("*웃음* 네~~ 알겠습니다!!! (한숨) 흠, 좋아요 ㅎㅎ 🎉🎉")
+    assert out == "네 알겠습니다! 좋아요"
+
+    out = strip_markdown_for_speech(
+        "Hmm, let me think... *laughs* That's great! 👍 lol. Wow, ok :) ^^"
+    )
+    assert out == "let me think... That's great! ok"
+
+    # Flags and ZWJ sequences go as a whole, not as leftover glue.
+    assert strip_markdown_for_speech("화이팅! 🇰🇷 👩‍💻 끝") == "화이팅! 끝"
+    assert strip_unspoken("👩‍💻").strip() == ""
+
+
+def test_strip_unspoken_keeps_real_words_and_ranges() -> None:
+    text = "1~5번 문제를 풀어보세요. 음악은 좋아요. 흠집이 있어요. 휴가 계획은? 헐크는 강해요."
+    assert strip_markdown_for_speech(text) == text
+    # Emphasis on ordinary words is unwrapped, not dropped like a stage direction.
+    assert strip_markdown_for_speech("The *important* part is **this**.") == (
+        "The important part is this."
+    )
+    # A lone tilde is decoration; one between numbers is a range.
+    assert strip_markdown_for_speech("Also ~ approximately 5~10 items.") == (
+        "Also approximately 5~10 items."
+    )
 
 
 def test_strip_markdown_truncates_on_boundary() -> None:

@@ -37,7 +37,9 @@ import {
   shouldAppendEventContent,
 } from "@/lib/stream";
 import { useChatAutoScroll } from "@/hooks/useChatAutoScroll";
+import { markQuestionSent } from "@/hooks/useVoiceAutoplay";
 import { AssistantActivity } from "@/features/chat/trace";
+import { PlayAudioButton } from "@/features/chat/messages";
 import {
   PartnerComposer,
   type PartnerPendingAttachment,
@@ -721,7 +723,11 @@ export default function PartnerChat({
   );
 
   const handleSend = useCallback(
-    (content: string, attachments: PartnerPendingAttachment[]) => {
+    (
+      content: string,
+      attachments: PartnerPendingAttachment[],
+      viaVoice: boolean,
+    ) => {
       if (streaming || !connected) return false;
 
       // A new user-authored turn explicitly returns to live-follow mode.
@@ -753,6 +759,8 @@ export default function PartnerChat({
         }),
       );
       if (!sent) return false;
+      // Let the reply's speaker button know whether to read it aloud.
+      markQuestionSent(viaVoice);
       setMessages((msgs) => [
         ...msgs,
         {
@@ -776,6 +784,29 @@ export default function PartnerChat({
       t,
     ],
   );
+
+  // Which reply just finished generating in THIS session, so its speaker
+  // button can auto-play it. Same render-time transition pattern as the main
+  // chat list: flips when streaming ends, resets on a session switch.
+  const lastAssistantIndex = messages.reduce(
+    (found, msg, i) => (msg.role === "assistant" && !msg.error ? i : found),
+    -1,
+  );
+  const [prevStreaming, setPrevStreaming] = useState(streaming);
+  const [prevSessionKey, setPrevSessionKey] = useState(sessionKey);
+  const [freshlyCompletedIndex, setFreshlyCompletedIndex] = useState<
+    number | null
+  >(null);
+  if (prevSessionKey !== sessionKey) {
+    setPrevSessionKey(sessionKey);
+    setPrevStreaming(false);
+    setFreshlyCompletedIndex(null);
+  } else if (prevStreaming !== streaming) {
+    setPrevStreaming(streaming);
+    if (!streaming && lastAssistantIndex >= 0) {
+      setFreshlyCompletedIndex(lastAssistantIndex);
+    }
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -842,7 +873,21 @@ export default function PartnerChat({
                         {msg.content}
                       </p>
                     ) : (
-                      <AssistantResponse content={msg.content} />
+                      <>
+                        <AssistantResponse content={msg.content} />
+                        {msg.content.trim() && (
+                          <div className="mt-2 flex items-center">
+                            <PlayAudioButton
+                              content={msg.content}
+                              conversationKey={`partner:${partnerId}:${sessionKey}`}
+                              autoPlayFresh={
+                                i === lastAssistantIndex &&
+                                freshlyCompletedIndex === i
+                              }
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -916,6 +961,7 @@ export default function PartnerChat({
           onStop={sendStop}
           streaming={streaming}
           disabled={!connected}
+          handsFreeScope={`partner:${partnerId}`}
         />
       </div>
     </div>

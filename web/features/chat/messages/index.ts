@@ -3,8 +3,8 @@ export {
   ChatMessageList,
   CopyActionButton,
   GeneratedFileCards,
-  PlayAudioButton,
   RoughActionButton,
   UserMessage,
   getModeBadgeLabel,
 } from "./ChatMessageList";
+export { PlayAudioButton } from "./PlayAudioButton";

@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { configureTypeIncludes } from "./next-type-includes.mjs";
 import { copyPdfjsAssets } from "./copy-pdfjs-assets.mjs";
+import { copyVadAssets } from "./copy-vad-assets.mjs";
 
 const webRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -68,6 +69,7 @@ if (isEntry) {
   let result;
   try {
     copyPdfjsAssets();
+    copyVadAssets();
     result = spawnSync(
       process.execPath,
       // Next.js 16 defaults to Turbopack, which does not emit the standalone

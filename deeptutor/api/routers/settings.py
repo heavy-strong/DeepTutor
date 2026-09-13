@@ -117,6 +117,17 @@ DEFAULT_UI_SETTINGS = {
     # preference (not catalog); the chat surface also keeps a per-session
     # override on top of this global default.
     "voice_autoplay": False,
+    # When true, a reply to a question that was dictated through the mic is
+    # read aloud even while ``voice_autoplay`` is off — ask by voice, get
+    # answered by voice. Typed questions are unaffected.
+    "voice_reply_to_voice": True,
+    # Hands-free listening: the composer runs a voice-activity detector and
+    # transcribes each utterance on its own. ``silence_ms`` is how long a
+    # pause must last before an utterance is considered finished;
+    # ``send_delay_ms`` is the review window before the transcript is sent
+    # (0 = send immediately). Off by default; the user turns it on per chat.
+    "voice_handsfree_silence_ms": 800,
+    "voice_handsfree_send_delay_ms": 2000,
     # Seconds the chat UI waits for any turn event before declaring the
     # connection timed out. Bumped from 60 → 180 so slow tools (image/video
     # generation) don't trip it; user-adjustable in Settings > Network.
@@ -170,6 +181,15 @@ class UISettingsUpdate(BaseModel):
 
 class VoiceAutoplayUpdate(BaseModel):
     voice_autoplay: bool
+
+
+class VoiceReplyToVoiceUpdate(BaseModel):
+    voice_reply_to_voice: bool
+
+
+class VoiceHandsfreeUpdate(BaseModel):
+    voice_handsfree_silence_ms: int | None = Field(default=None, ge=300, le=5000)
+    voice_handsfree_send_delay_ms: int | None = Field(default=None, ge=0, le=15000)
 
 
 class ChatResponseTimeoutUpdate(BaseModel):
@@ -1663,6 +1683,30 @@ async def update_voice_autoplay(update: VoiceAutoplayUpdate):
     """
     patch_ui_settings(voice_autoplay=update.voice_autoplay)
     return {"voice_autoplay": update.voice_autoplay}
+
+
+@router.put("/voice-reply-to-voice")
+async def update_voice_reply_to_voice(update: VoiceReplyToVoiceUpdate):
+    """Persist whether a mic-dictated question gets its reply read aloud.
+
+    Independent of ``voice_autoplay``: that one speaks every reply, this one
+    only the replies to questions the user asked by voice.
+    """
+    patch_ui_settings(voice_reply_to_voice=update.voice_reply_to_voice)
+    return {"voice_reply_to_voice": update.voice_reply_to_voice}
+
+
+@router.put("/voice-handsfree")
+async def update_voice_handsfree(update: VoiceHandsfreeUpdate):
+    """Persist the hands-free listening timings; only the fields sent change."""
+    fields = update.model_dump(exclude_none=True)
+    if fields:
+        patch_ui_settings(**fields)
+    current = load_ui_settings()
+    return {
+        key: current.get(key, DEFAULT_UI_SETTINGS[key])
+        for key in ("voice_handsfree_silence_ms", "voice_handsfree_send_delay_ms")
+    }
 
 
 @router.put("/chat-response-timeout")

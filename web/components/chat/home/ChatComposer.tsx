@@ -72,6 +72,10 @@ import ContextReferenceTree, {
 } from "./ContextReferenceTree";
 import { ComposerInput, type ComposerInputHandle } from "./ComposerInput";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { markQuestionSent } from "@/hooks/useVoiceAutoplay";
+import { useHandsFreeVoice } from "@/hooks/useHandsFreeVoice";
+import { HandsFreeButton } from "@/components/chat/HandsFreeButton";
+import { VoiceDeviceButton } from "@/components/chat/VoiceDevicePicker";
 import type { CapabilityDef } from "@/features/capabilities/presentation";
 
 interface PendingAttachment {
@@ -414,12 +418,27 @@ export default memo(function ChatComposer({
 
   // Microphone → speech-to-text. Appends the transcript to whatever is already
   // in the composer so a dictated phrase can be combined with typed text.
+  // True while the draft contains dictated text; the send passes it along so
+  // the reply can be spoken back ("reply to voice"). Clearing the draft resets
+  // it, so a question typed afterwards isn't mistaken for a spoken one.
+  const dictatedRef = useRef(false);
   const handleTranscript = useCallback((text: string) => {
     const current = inputHandleRef.current?.getValue() || "";
     const next = current.trim() ? `${current.trimEnd()} ${text}` : text;
     inputHandleRef.current?.setValue(next);
+    dictatedRef.current = true;
   }, []);
   const recorder = useVoiceRecorder(handleTranscript);
+  // Hands-free: the detector feeds the same transcript path and then submits
+  // for the user. The send handler is declared later, so it goes via a ref.
+  const handsFreeSendRef = useRef<() => void>(() => {});
+  const handsFree = useHandsFreeVoice({
+    scope: "chat",
+    onTranscript: handleTranscript,
+    onAutoSend: () => handsFreeSendRef.current(),
+    paused: isStreaming,
+  });
+  const cancelAutoSend = handsFree.cancelCountdown;
 
   // Composer-row compaction: when the available width drops below ~620 px
   // (e.g. the Viewer panel is open or the user is on a narrow viewport),
@@ -500,13 +519,22 @@ export default memo(function ChatComposer({
   // Functional-update form keeps `handleInputChange` identity stable across
   // every keystroke (no `hasContent` in deps), so the memoized ComposerInput
   // doesn't get re-rendered just because we observed a content-empty toggle.
-  const handleInputChange = useCallback((val: string) => {
-    const next = !!val.trim();
-    setHasContent((prev) => (prev === next ? prev : next));
-  }, []);
+  const handleInputChange = useCallback(
+    (val: string) => {
+      const next = !!val.trim();
+      if (!next) dictatedRef.current = false;
+      // Editing a dictated draft means the user wants to review it first.
+      cancelAutoSend();
+      setHasContent((prev) => (prev === next ? prev : next));
+    },
+    [cancelAutoSend],
+  );
 
   const doSend = useCallback(
     (content: string) => {
+      cancelAutoSend();
+      markQuestionSent(dictatedRef.current);
+      dictatedRef.current = false;
       onSend(content);
       setHasContent(false);
       inputHandleRef.current?.clear();
@@ -515,7 +543,7 @@ export default memo(function ChatComposer({
       // so the user can keep typing, including after switching back to the tab.
       focusTextarea();
     },
-    [focusTextarea, onSend],
+    [cancelAutoSend, focusTextarea, onSend],
   );
 
   const hasReferences =
@@ -680,6 +708,9 @@ export default memo(function ChatComposer({
     const content = inputHandleRef.current?.getValue() || "";
     doSend(content);
   }, [canSend, doSend, isConfigBlocked, onRequestConfigConfirm]);
+  useEffect(() => {
+    handsFreeSendRef.current = handleManualSend;
+  }, [handleManualSend]);
 
   // One button, so one handler: mid-turn the same control cancels — except
   // while the turn is waiting on the user, where sending IS how it continues.
@@ -1154,7 +1185,11 @@ export default memo(function ChatComposer({
                 <button
                   type="button"
                   onClick={recorder.toggle}
-                  disabled={recorder.state === "transcribing" || isStreaming}
+                  disabled={
+                    recorder.state === "transcribing" ||
+                    isStreaming ||
+                    handsFree.enabled
+                  }
                   className={`group relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] transition-[background-color,color,transform] duration-150 active:scale-90 disabled:opacity-40 ${
                     recorder.state === "recording"
                       ? "bg-red-500/15 text-red-500"
@@ -1185,6 +1220,14 @@ export default memo(function ChatComposer({
                     <Mic size={16} strokeWidth={1.9} />
                   )}
                 </button>
+                <HandsFreeButton
+                  state={handsFree.state}
+                  countdown={handsFree.countdown}
+                  error={handsFree.error}
+                  onClick={handsFree.toggle}
+                  className="h-8 w-8 rounded-[10px]"
+                />
+                <VoiceDeviceButton className="h-8 w-8 rounded-[10px]" />
 
                 {/* The thing you press is the thing that's working is the
                     thing you press to stop — one element for the whole turn,

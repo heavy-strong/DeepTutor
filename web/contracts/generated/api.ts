@@ -7556,6 +7556,49 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly "/api/settings/voice-handsfree": {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Update Voice Handsfree
+     * @description Persist the hands-free listening timings; only the fields sent change.
+     */
+    readonly put: operations["update_voice_handsfree_api_settings_voice_handsfree_put"];
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly "/api/settings/voice-reply-to-voice": {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Update Voice Reply To Voice
+     * @description Persist whether a mic-dictated question gets its reply read aloud.
+     *
+     *     Independent of ``voice_autoplay``: that one speaks every reply, this one
+     *     only the replies to questions the user asked by voice.
+     */
+    readonly put: operations["update_voice_reply_to_voice_api_settings_voice_reply_to_voice_put"];
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly "/api/settings/workspace": {
     readonly parameters: {
       readonly query?: never;
@@ -13414,6 +13457,18 @@ export interface components {
       /** Voice Autoplay */
       readonly voice_autoplay: boolean;
     };
+    /** VoiceHandsfreeUpdate */
+    readonly VoiceHandsfreeUpdate: {
+      /** Voice Handsfree Send Delay Ms */
+      readonly voice_handsfree_send_delay_ms?: number | null;
+      /** Voice Handsfree Silence Ms */
+      readonly voice_handsfree_silence_ms?: number | null;
+    };
+    /** VoiceReplyToVoiceUpdate */
+    readonly VoiceReplyToVoiceUpdate: {
+      /** Voice Reply To Voice */
+      readonly voice_reply_to_voice: boolean;
+    };
     /** WebSourceInfo */
     readonly WebSourceInfo: {
       /**
@@ -13972,6 +14027,10 @@ export type SchemaVideoLearningSettingsRequest =
   components["schemas"]["VideoLearningSettingsRequest"];
 export type SchemaVoiceAutoplayUpdate =
   components["schemas"]["VoiceAutoplayUpdate"];
+export type SchemaVoiceHandsfreeUpdate =
+  components["schemas"]["VoiceHandsfreeUpdate"];
+export type SchemaVoiceReplyToVoiceUpdate =
+  components["schemas"]["VoiceReplyToVoiceUpdate"];
 export type SchemaWebSourceInfo = components["schemas"]["WebSourceInfo"];
 export type SchemaWhiteboardPinRequest =
   components["schemas"]["WhiteboardPinRequest"];
@@ -30997,6 +31056,80 @@ export interface operations {
     readonly requestBody: {
       readonly content: {
         readonly "application/json": components["schemas"]["VoiceAutoplayUpdate"];
+      };
+    };
+    readonly responses: {
+      /** @description Successful Response */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      readonly 422: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  readonly update_voice_handsfree_api_settings_voice_handsfree_put: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: {
+        readonly Authorization?: string | null;
+      };
+      readonly path?: never;
+      readonly cookie?: {
+        readonly dt_token?: string | null;
+      };
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly "application/json": components["schemas"]["VoiceHandsfreeUpdate"];
+      };
+    };
+    readonly responses: {
+      /** @description Successful Response */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      readonly 422: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  readonly update_voice_reply_to_voice_api_settings_voice_reply_to_voice_put: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: {
+        readonly Authorization?: string | null;
+      };
+      readonly path?: never;
+      readonly cookie?: {
+        readonly dt_token?: string | null;
+      };
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly "application/json": components["schemas"]["VoiceReplyToVoiceUpdate"];
       };
     };
     readonly responses: {

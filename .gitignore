@@ -89,6 +89,7 @@ web/.next-*/
 # PDF.js decoder files are copied from node_modules for local/dev and release
 # builds; they are dependency-generated assets, not source files.
 web/public/pdfjs/
+web/public/vad/
 # Per-process TypeScript configs used by isolated build/typecheck wrappers
 web/tsconfig.deeptutor-*.json
 # Temporary Next.js dist roots created by isolated build/test runs

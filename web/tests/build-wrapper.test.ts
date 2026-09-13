@@ -21,8 +21,11 @@ test("the build publishes PDF.js decoder assets for standalone deployments", () 
     string,
     string
   >;
-  assert.equal(scripts.predev, "node ./scripts/copy-pdfjs-assets.mjs");
-  assert.equal(scripts["predev:turbo"], "node ./scripts/copy-pdfjs-assets.mjs");
+  assert.match(scripts.predev, /^node \.\/scripts\/copy-pdfjs-assets\.mjs/);
+  assert.match(
+    scripts["predev:turbo"],
+    /^node \.\/scripts\/copy-pdfjs-assets\.mjs/,
+  );
 
   const source = read("scripts", "copy-pdfjs-assets.mjs");
   assert.match(source, /node_modules.*pdfjs-dist.*wasm/);
@@ -44,6 +47,34 @@ test("the build publishes PDF.js decoder assets for standalone deployments", () 
     assert.ok(
       existsSync(path.join(webRoot, "public", "pdfjs", "wasm", name)),
       name,
+    );
+  }
+});
+
+test("the build publishes the hands-free voice detector for offline use", () => {
+  const scripts = JSON.parse(read("package.json")).scripts as Record<
+    string,
+    string
+  >;
+  for (const key of ["predev", "predev:turbo"]) {
+    assert.match(scripts[key], /node \.\/scripts\/copy-vad-assets\.mjs$/);
+  }
+  assert.match(read("scripts", "build.mjs"), /copyVadAssets\(\)/);
+
+  const result = spawnSync(process.execPath, ["scripts/copy-vad-assets.mjs"], {
+    cwd: webRoot,
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  for (const name of [
+    "silero_vad_v5.onnx",
+    "vad.worklet.bundle.min.js",
+    "ort-wasm-simd-threaded.wasm",
+    "ort-wasm-simd-threaded.mjs",
+  ]) {
+    assert.ok(
+      existsSync(path.join(webRoot, "public", "vad", name)),
+      `missing ${name}`,
     );
   }
 });

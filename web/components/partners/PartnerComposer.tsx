@@ -7,7 +7,15 @@
  */
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, Info, Paperclip, Square, X } from "lucide-react";
+import {
+  ArrowUp,
+  Info,
+  Loader2,
+  Mic,
+  Paperclip,
+  Square,
+  X,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { shouldSubmitOnEnter } from "@/lib/composer-keyboard";
 import {
@@ -28,6 +36,10 @@ import {
 } from "@/lib/file-attachments";
 import { useAutoSizedTextarea } from "@/lib/use-auto-sized-textarea";
 import { useImeComposing } from "@/lib/use-ime-composing";
+import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { useHandsFreeVoice } from "@/hooks/useHandsFreeVoice";
+import { HandsFreeButton } from "@/components/chat/HandsFreeButton";
+import { VoiceDeviceButton } from "@/components/chat/VoiceDevicePicker";
 
 export interface PartnerPendingAttachment {
   type: "image" | "file";
@@ -44,13 +56,22 @@ export const PartnerComposer = memo(function PartnerComposer({
   disabled,
   streaming,
   placeholder,
+  handsFreeScope,
 }: {
-  /** Returns true when sending starts an asynchronous streamed response. */
-  onSend: (content: string, attachments: PartnerPendingAttachment[]) => boolean;
+  /** Returns true when sending starts an asynchronous streamed response.
+   *  ``viaVoice`` is true when the draft holds dictated text, so the reply can
+   *  be spoken back. */
+  onSend: (
+    content: string,
+    attachments: PartnerPendingAttachment[],
+    viaVoice: boolean,
+  ) => boolean;
   onStop?: () => void;
   disabled?: boolean;
   streaming?: boolean;
   placeholder?: string;
+  /** Keeps hands-free on/off per partner across session switches. */
+  handsFreeScope?: string;
 }) {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
@@ -74,6 +95,29 @@ export const PartnerComposer = memo(function PartnerComposer({
     useImeComposing();
 
   useAutoSizedTextarea(textareaRef, input, { min: 24, max: 180 });
+
+  // Mic → /api/voice/stt → appended to the draft, same as the main composer.
+  // Remember that the draft was dictated so the send can ask for a spoken
+  // reply; clearing the draft forgets it.
+  const dictatedRef = useRef(false);
+  const handleTranscript = useCallback((text: string) => {
+    setInput((current) =>
+      current.trim() ? `${current.trimEnd()} ${text}` : text,
+    );
+    dictatedRef.current = true;
+  }, []);
+  const recorder = useVoiceRecorder(handleTranscript);
+  // Hands-free: the detector feeds the same transcript path and then submits
+  // the draft for the user. Submission goes through a ref because `submit`
+  // is declared further down.
+  const submitRef = useRef<() => void>(() => {});
+  const handsFree = useHandsFreeVoice({
+    scope: handsFreeScope ?? "partner",
+    onTranscript: handleTranscript,
+    onAutoSend: () => submitRef.current(),
+    paused: !!disabled || !!streaming,
+  });
+  const cancelAutoSend = handsFree.cancelCountdown;
 
   const focusTextarea = useCallback(() => {
     requestAnimationFrame(() => {
@@ -241,7 +285,9 @@ export const PartnerComposer = memo(function PartnerComposer({
   const submit = useCallback(() => {
     const content = input.trim();
     if ((!content && attachments.length === 0) || disabled) return;
-    const awaitsResponse = onSend(content, attachments);
+    cancelAutoSend();
+    const awaitsResponse = onSend(content, attachments, dictatedRef.current);
+    dictatedRef.current = false;
     setInput("");
     setAttachments([]);
     if (awaitsResponse) {
@@ -249,7 +295,10 @@ export const PartnerComposer = memo(function PartnerComposer({
     } else {
       focusTextarea();
     }
-  }, [attachments, disabled, focusTextarea, input, onSend]);
+  }, [attachments, cancelAutoSend, disabled, focusTextarea, input, onSend]);
+  useEffect(() => {
+    submitRef.current = submit;
+  }, [submit]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -294,10 +343,13 @@ export const PartnerComposer = memo(function PartnerComposer({
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setInput(e.target.value);
+      if (!e.target.value.trim()) dictatedRef.current = false;
+      // Editing a dictated draft means the user wants to review it first.
+      cancelAutoSend();
       setSlashClosed(false); // typing always re-arms the menu
       setSlashIndex(0);
     },
-    [],
+    [cancelAutoSend],
   );
 
   const handlePaste = useCallback(
@@ -543,6 +595,50 @@ export const PartnerComposer = memo(function PartnerComposer({
           >
             <Paperclip className="h-4 w-4" strokeWidth={1.9} />
           </button>
+          <button
+            type="button"
+            onClick={recorder.toggle}
+            disabled={
+              disabled ||
+              streaming ||
+              recorder.state === "transcribing" ||
+              handsFree.enabled
+            }
+            aria-label={
+              recorder.state === "recording"
+                ? t("Stop recording")
+                : t("Record voice")
+            }
+            title={
+              recorder.error ||
+              (recorder.state === "recording"
+                ? t("Stop recording")
+                : t("Record voice"))
+            }
+            className={`relative flex h-7 w-7 items-center justify-center rounded-full transition-colors disabled:opacity-30 ${
+              recorder.state === "recording"
+                ? "bg-red-500/15 text-red-500"
+                : "text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            {recorder.state === "recording" && (
+              <span className="pointer-events-none absolute inset-0 animate-pulse rounded-full border border-red-500/40" />
+            )}
+            {recorder.state === "transcribing" ? (
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.9} />
+            ) : (
+              <Mic className="h-4 w-4" strokeWidth={1.9} />
+            )}
+          </button>
+          <HandsFreeButton
+            state={handsFree.state}
+            countdown={handsFree.countdown}
+            error={handsFree.error}
+            disabled={disabled}
+            onClick={handsFree.toggle}
+            className="h-7 w-7 rounded-full"
+          />
+          <VoiceDeviceButton className="h-7 w-7 rounded-full" />
           <div
             className="relative flex items-center"
             onMouseEnter={() => setShowHelp(true)}
@@ -568,6 +664,16 @@ export const PartnerComposer = memo(function PartnerComposer({
                 <p className="mt-1.5">
                   {t(
                     "Attach images or documents with the clip, or just drag them in.",
+                  )}
+                </p>
+                <p className="mt-1.5">
+                  {t(
+                    "Tap the mic to dictate; ask by voice and the reply is read aloud.",
+                  )}
+                </p>
+                <p className="mt-1.5">
+                  {t(
+                    "Turn on hands-free listening to talk without pressing anything — each sentence is sent after a short pause.",
                   )}
                 </p>
               </div>

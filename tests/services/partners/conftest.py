@@ -97,4 +97,9 @@ def fake_orchestrator(monkeypatch):
 
     monkeypatch.setattr(selection_runtime, "activate_llm_selection", _record_activate)
     monkeypatch.setattr(selection_runtime, "reset_llm_selection", lambda token: None)
+    # Selections here are synthetic ids with no catalog behind them; the
+    # stale-selection guard has its own tests, so treat them all as live.
+    from deeptutor.services.partners import model_runtime
+
+    monkeypatch.setattr(model_runtime, "partner_llm_selection_available", lambda _sel: True)
     return _FakeOrchestrator

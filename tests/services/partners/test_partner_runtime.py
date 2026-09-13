@@ -439,6 +439,27 @@ class TestTurnExecution:
         assert attempted == [primary, backup]
 
     @pytest.mark.asyncio
+    async def test_stale_stored_selection_runs_on_system_default(
+        self, partners_root, fake_orchestrator, monkeypatch
+    ):
+        # The selection persisted in config.yaml can outlive its catalog
+        # entry (a model re-saved in Settings gets a new id). The turn must
+        # then run on the system default instead of failing every time with
+        # "selected profile/model was not found".
+        from deeptutor.services.partners import model_runtime
+
+        stale = {"profile_id": "p1", "model_id": "m-gone"}
+        monkeypatch.setattr(
+            model_runtime, "partner_llm_selection_available", lambda sel: sel != stale
+        )
+        fake_orchestrator.script = finish("default answer")
+        runner = _runner(partners_root, PartnerConfig(name="Ada", llm_selection=stale))
+
+        final = await runner.process_message(_msg())
+        assert final == "default answer"
+        assert fake_orchestrator.activated_selections == [None]
+
+    @pytest.mark.asyncio
     async def test_successful_turn_never_touches_backup(self, partners_root, fake_orchestrator):
         backup = {"profile_id": "p2", "model_id": "m2"}
         fake_orchestrator.script = finish("first try works")
