@@ -368,6 +368,29 @@ async def test_stt_adapter_multipart(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
+async def test_stt_adapter_prioritizes_primary_language_and_hints_secondary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    resp = httpx.Response(200, json={"text": "안녕하세요 OpenAI"})
+    captured = _capture_post(monkeypatch, resp)
+    config = STTConfig(
+        model="gpt-4o-mini-transcribe",
+        base_url="https://api.openai.com/v1",
+        api_key="sk",
+        language="ko",
+        secondary_language="en",
+    )
+
+    await OpenAICompatSTTAdapter().transcribe(
+        b"RIFFxxxx", config, filename="a.wav", content_type="audio/wav"
+    )
+
+    assert captured["data"]["language"] == "ko"
+    assert "primarily uses Korean" in captured["data"]["prompt"]
+    assert "English may appear as a secondary language" in captured["data"]["prompt"]
+
+
+@pytest.mark.asyncio
 async def test_stt_adapter_strips_codec_parameters(monkeypatch: pytest.MonkeyPatch) -> None:
     resp = httpx.Response(200, json={"text": "hello world"})
     captured = _capture_post(monkeypatch, resp)
@@ -424,6 +447,18 @@ async def test_dashscope_stt_recognition_websocket_shape() -> None:
     assert start["payload"]["parameters"] == {"format": "wav", "sample_rate": 16000}
     assert websocket.chunks == [b"RIFFxxxx"]
     assert json.loads(websocket.strings[-1])["header"]["action"] == "finish-task"
+
+
+def test_dashscope_stt_sends_ordered_language_hints_for_v2() -> None:
+    config = STTConfig(
+        model="paraformer-v2",
+        language="ko",
+        secondary_language="en",
+    )
+
+    payload = DashScopeSTTAdapter._start_payload(config, "task-id")
+
+    assert payload["payload"]["parameters"]["language_hints"] == ["ko", "en"]
 
 
 def test_dashscope_stt_url_and_errors() -> None:
@@ -513,6 +548,18 @@ def test_resolve_stt_config_picks_openrouter_base64_style() -> None:
     assert cfg.provider_name == "openrouter"
     assert cfg.request_style == "base64_json"
     assert cfg.base_url == "https://openrouter.ai/api/v1"
+
+
+def test_resolve_stt_config_keeps_language_priority() -> None:
+    catalog = _voice_catalog()
+    model = catalog["services"]["stt"]["profiles"][0]["models"][0]
+    model["language"] = "ko"
+    model["secondary_language"] = "en"
+
+    cfg = resolve_stt_runtime_config(catalog=catalog)
+
+    assert cfg.language == "ko"
+    assert cfg.secondary_language == "en"
 
 
 def test_resolve_dashscope_voice_configs() -> None:

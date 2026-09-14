@@ -4039,5 +4039,15 @@
   "This browser can't choose an output device; it uses the system default.": "This browser can't choose an output device; it uses the system default.",
   "Mic: {{mic}} · Speaker: {{speaker}}": "Mic: {{mic}} · Speaker: {{speaker}}",
   "Remembered for this browser. Applies to the mic, hands-free listening and spoken replies.": "Remembered for this browser. Applies to the mic, hands-free listening and spoken replies.",
-  "Which microphone and speaker this browser uses for dictation, hands-free listening and spoken replies. Also reachable from the headphones button in the composer.": "Which microphone and speaker this browser uses for dictation, hands-free listening and spoken replies. Also reachable from the headphones button in the composer."
+  "Which microphone and speaker this browser uses for dictation, hands-free listening and spoken replies. Also reachable from the headphones button in the composer.": "Which microphone and speaker this browser uses for dictation, hands-free listening and spoken replies. Also reachable from the headphones button in the composer.",
+  "Primary recognition language": "Primary recognition language",
+  "Secondary language (optional)": "Secondary language (optional)",
+  "Auto-detect": "Auto-detect",
+  "Korean": "Korean",
+  "English": "English",
+  "Japanese": "Japanese",
+  "Chinese": "Chinese",
+  "None": "None",
+  "Use your main spoken language to avoid incorrect automatic language detection.": "Use your main spoken language to avoid incorrect automatic language detection.",
+  "Keeps terms in this language when you switch languages while speaking.": "Keeps terms in this language when you switch languages while speaking."
 }

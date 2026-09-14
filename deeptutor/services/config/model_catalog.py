@@ -488,6 +488,11 @@ class ModelCatalogService:
                             # (e.g. "alloy", "autumn", "model:voice").
                             model.setdefault("voice", "")
                             model.setdefault("response_format", "mp3")
+                        elif service_name == "stt":
+                            # ISO 639-1 hints. Empty primary language keeps
+                            # provider-side automatic detection enabled.
+                            model.setdefault("language", "")
+                            model.setdefault("secondary_language", "")
                         elif service_name == "imagegen":
                             # Generation knobs; empty → provider default.
                             model.setdefault("size", "")

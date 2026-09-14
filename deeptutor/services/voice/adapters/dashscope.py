@@ -232,6 +232,19 @@ class DashScopeSTTAdapter(BaseSTTAdapter):
     def _start_payload(
         config: STTConfig, task_id: str, *, sample_rate: int = 16000
     ) -> dict[str, Any]:
+        parameters: dict[str, Any] = {"format": "wav", "sample_rate": sample_rate}
+        # Paraformer v2's native WebSocket protocol supports multiple ordered
+        # language hints.  Keep the primary language first and omit the field
+        # for older models, where it is not a supported parameter.
+        if config.model.strip().lower().endswith("-v2"):
+            language_hints = [
+                value.strip().lower()
+                for value in (config.language, config.secondary_language)
+                if value and value.strip()
+            ]
+            language_hints = list(dict.fromkeys(language_hints))
+            if language_hints:
+                parameters["language_hints"] = language_hints
         return {
             "header": {
                 "task_id": task_id,
@@ -244,7 +257,7 @@ class DashScopeSTTAdapter(BaseSTTAdapter):
                 "task": "asr",
                 "function": "recognition",
                 "input": {},
-                "parameters": {"format": "wav", "sample_rate": sample_rate},
+                "parameters": parameters,
             },
         }
 

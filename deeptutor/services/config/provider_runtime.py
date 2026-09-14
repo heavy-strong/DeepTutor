@@ -1164,6 +1164,7 @@ def resolve_stt_runtime_config(
         api_version=_as_str((profile or {}).get("api_version")) or None,
         extra_headers=_to_headers((profile or {}).get("extra_headers")),
         language=_as_str((model or {}).get("language")) or None,
+        secondary_language=_as_str((model or {}).get("secondary_language")) or None,
     )
 
 

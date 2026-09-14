@@ -4039,5 +4039,15 @@
   "This browser can't choose an output device; it uses the system default.": "此浏览器无法选择输出设备，将使用系统默认。",
   "Mic: {{mic}} · Speaker: {{speaker}}": "麦克风：{{mic}} · 扬声器：{{speaker}}",
   "Remembered for this browser. Applies to the mic, hands-free listening and spoken replies.": "仅在此浏览器记住。适用于麦克风、免提聆听和语音回复。",
-  "Which microphone and speaker this browser uses for dictation, hands-free listening and spoken replies. Also reachable from the headphones button in the composer.": "此浏览器用于口述、免提聆听和语音回复的麦克风与扬声器。也可通过输入框的耳机按钮打开。"
+  "Which microphone and speaker this browser uses for dictation, hands-free listening and spoken replies. Also reachable from the headphones button in the composer.": "此浏览器用于口述、免提聆听和语音回复的麦克风与扬声器。也可通过输入框的耳机按钮打开。",
+  "Primary recognition language": "主要识别语言",
+  "Secondary language (optional)": "次要语言（可选）",
+  "Auto-detect": "自动检测",
+  "Korean": "韩语",
+  "English": "英语",
+  "Japanese": "日语",
+  "Chinese": "中文",
+  "None": "无",
+  "Use your main spoken language to avoid incorrect automatic language detection.": "选择最常说的语言，以避免自动检测为错误的语言。",
+  "Keeps terms in this language when you switch languages while speaking.": "说话时切换语言时，尽量保留该语言的词语。"
 }

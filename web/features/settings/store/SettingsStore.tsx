@@ -77,10 +77,12 @@ export type CatalogModel = {
   // Voice (TTS): free-form provider/model-specific voice string, e.g.
   // "alloy", "autumn", "model:voice". `response_format` is the TTS output
   // codec (mp3/wav/...) and is reused by imagegen ("url"/"b64_json").
-  // `language` is an optional STT hint.
+  // `language` is the primary STT hint; `secondary_language` helps preserve
+  // occasional code-switching (for example, Korean with English terms).
   voice?: string;
   response_format?: string;
   language?: string;
+  secondary_language?: string;
   // Image generation: pixel size (e.g. "1024x1024"), quality, and style.
   size?: string;
   quality?: string;

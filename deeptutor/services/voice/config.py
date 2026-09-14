@@ -56,8 +56,41 @@ class STTConfig:
     base_url: str = ""
     api_version: str | None = None
     extra_headers: dict[str, str] = field(default_factory=dict)
+    # ``language`` is the provider's primary recognition-language hint.  A
+    # second language is expressed as a transcription prompt because the
+    # OpenAI-compatible STT APIs accept one primary ISO language code only.
     language: str | None = None
+    secondary_language: str | None = None
     request_timeout: int = 120
+
+
+_STT_LANGUAGE_NAMES = {
+    "ko": "Korean",
+    "en": "English",
+    "ja": "Japanese",
+    "zh": "Chinese",
+}
+
+
+def stt_language_prompt(config: STTConfig) -> str | None:
+    """Return a conservative code-switching hint for compatible STT APIs.
+
+    ``language`` remains the authoritative recognition setting.  The prompt
+    simply tells a transcription model that occasional words in the selected
+    secondary language are expected, which helps Korean speech avoid being
+    mistaken for Japanese while preserving English technical terms.
+    """
+    primary = (config.language or "").strip().lower()
+    secondary = (config.secondary_language or "").strip().lower()
+    if not primary or not secondary or primary == secondary:
+        return None
+    primary_name = _STT_LANGUAGE_NAMES.get(primary, primary)
+    secondary_name = _STT_LANGUAGE_NAMES.get(secondary, secondary)
+    return (
+        f"The speaker primarily uses {primary_name}; {secondary_name} may appear "
+        "as a secondary language. Transcribe faithfully in the spoken languages. "
+        f"Do not translate or substitute {primary_name} speech with another language."
+    )
 
 
 __all__ = [
@@ -69,4 +102,5 @@ __all__ = [
     "DEFAULT_MAX_INPUT_CHARS",
     "TTSConfig",
     "STTConfig",
+    "stt_language_prompt",
 ]

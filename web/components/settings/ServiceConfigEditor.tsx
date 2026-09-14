@@ -951,6 +951,86 @@ export function ServiceConfigEditor({ service }: { service: ServiceName }) {
                             </div>
                           </>
                         )}
+                        {service === "stt" && (
+                          <>
+                            <div>
+                              <div className="mb-1.5 text-[12px] text-[var(--muted-foreground)]">
+                                {t("Primary recognition language")}
+                              </div>
+                              <div className="relative">
+                                <select
+                                  className={selectClass}
+                                  value={activeModel.language || ""}
+                                  onChange={(e) =>
+                                    updateModelField(service, "language", e.target.value)
+                                  }
+                                >
+                                  <option className={selectOptionClass} value="">
+                                    {t("Auto-detect")}
+                                  </option>
+                                  <option className={selectOptionClass} value="ko">
+                                    {t("Korean")}
+                                  </option>
+                                  <option className={selectOptionClass} value="en">
+                                    {t("English")}
+                                  </option>
+                                  <option className={selectOptionClass} value="ja">
+                                    {t("Japanese")}
+                                  </option>
+                                  <option className={selectOptionClass} value="zh">
+                                    {t("Chinese")}
+                                  </option>
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                              </div>
+                              <p className="mt-1.5 text-[11px] text-[var(--muted-foreground)]">
+                                {t(
+                                  "Use your main spoken language to avoid incorrect automatic language detection.",
+                                )}
+                              </p>
+                            </div>
+                            <div>
+                              <div className="mb-1.5 text-[12px] text-[var(--muted-foreground)]">
+                                {t("Secondary language (optional)")}
+                              </div>
+                              <div className="relative">
+                                <select
+                                  className={selectClass}
+                                  value={activeModel.secondary_language || ""}
+                                  onChange={(e) =>
+                                    updateModelField(
+                                      service,
+                                      "secondary_language",
+                                      e.target.value,
+                                    )
+                                  }
+                                >
+                                  <option className={selectOptionClass} value="">
+                                    {t("None")}
+                                  </option>
+                                  <option className={selectOptionClass} value="en">
+                                    {t("English")}
+                                  </option>
+                                  <option className={selectOptionClass} value="ko">
+                                    {t("Korean")}
+                                  </option>
+                                  <option className={selectOptionClass} value="ja">
+                                    {t("Japanese")}
+                                  </option>
+                                  <option className={selectOptionClass} value="zh">
+                                    {t("Chinese")}
+                                  </option>
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                              </div>
+                              <p className="mt-1.5 text-[11px] text-[var(--muted-foreground)]">
+                                {t(
+                                  "Keeps terms in this language when you switch languages while speaking.",
+                                )}
+                              </p>
+                            </div>
+                          </>
+                        )}
                         {service === "imagegen" && (
                           <>
                             <div>

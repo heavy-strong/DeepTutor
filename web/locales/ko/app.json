@@ -87,5 +87,15 @@
   "This browser can't choose an output device; it uses the system default.": "이 브라우저는 출력 장치를 선택할 수 없어 시스템 기본값을 사용합니다.",
   "Mic: {{mic}} · Speaker: {{speaker}}": "마이크: {{mic}} · 스피커: {{speaker}}",
   "Remembered for this browser. Applies to the mic, hands-free listening and spoken replies.": "이 브라우저에만 저장됩니다. 마이크, 핸즈프리 듣기, 음성 답변에 모두 적용됩니다.",
-  "Which microphone and speaker this browser uses for dictation, hands-free listening and spoken replies. Also reachable from the headphones button in the composer.": "이 브라우저가 받아쓰기, 핸즈프리 듣기, 음성 답변에 사용할 마이크와 스피커입니다. 입력창의 헤드폰 버튼에서도 열 수 있습니다."
+  "Which microphone and speaker this browser uses for dictation, hands-free listening and spoken replies. Also reachable from the headphones button in the composer.": "이 브라우저가 받아쓰기, 핸즈프리 듣기, 음성 답변에 사용할 마이크와 스피커입니다. 입력창의 헤드폰 버튼에서도 열 수 있습니다.",
+  "Primary recognition language": "주 인식 언어",
+  "Secondary language (optional)": "보조 언어 (선택 사항)",
+  "Auto-detect": "자동 감지",
+  "Korean": "한국어",
+  "English": "영어",
+  "Japanese": "일본어",
+  "Chinese": "중국어",
+  "None": "없음",
+  "Use your main spoken language to avoid incorrect automatic language detection.": "주로 말하는 언어를 지정하면 다른 언어로 잘못 자동 감지되는 문제를 줄일 수 있습니다.",
+  "Keeps terms in this language when you switch languages while speaking.": "말하는 도중 이 언어를 섞어 쓸 때 해당 언어의 단어를 유지하도록 돕습니다."
 }

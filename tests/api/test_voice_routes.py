@@ -91,6 +91,7 @@ def test_stt_returns_text(client: TestClient, monkeypatch: pytest.MonkeyPatch) -
         captured["bytes"] = len(audio)
         captured["filename"] = filename
         captured["content_type"] = content_type
+        captured["language"] = language
         return "hello world"
 
     monkeypatch.setattr(voice_router, "transcribe_audio", fake_transcribe)
@@ -103,6 +104,25 @@ def test_stt_returns_text(client: TestClient, monkeypatch: pytest.MonkeyPatch) -
     assert captured["filename"] == "clip.webm"
     assert captured["bytes"] == 10
     assert captured["content_type"] == "audio/webm"
+    assert captured.get("language") is None
+
+
+def test_stt_forwards_requested_language(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, Any] = {}
+
+    async def fake_transcribe(audio: bytes, *, filename: str, content_type: str, language=None):
+        captured["language"] = language
+        return "안녕하세요"
+
+    monkeypatch.setattr(voice_router, "transcribe_audio", fake_transcribe)
+    resp = client.post(
+        "/api/voice/stt",
+        data={"language": "ko"},
+        files={"file": ("clip.webm", b"audiobytes", "audio/webm")},
+    )
+
+    assert resp.status_code == 200
+    assert captured["language"] == "ko"
 
 
 def test_stt_forwards_the_browser_reported_mime_verbatim(

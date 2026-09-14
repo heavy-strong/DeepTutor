@@ -28,7 +28,12 @@ from deeptutor.services.voice.base import (
     join_audio_path,
     normalize_stt_content_type,
 )
-from deeptutor.services.voice.config import STT_BASE64_JSON, STTConfig, TTSConfig
+from deeptutor.services.voice.config import (
+    STT_BASE64_JSON,
+    STTConfig,
+    TTSConfig,
+    stt_language_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -392,6 +397,8 @@ class OpenAICompatSTTAdapter(BaseSTTAdapter):
         data: dict[str, str] = {"model": config.model, "response_format": response_format}
         if config.language:
             data["language"] = config.language
+        if prompt := stt_language_prompt(config):
+            data["prompt"] = prompt
         headers = {**auth, **(config.extra_headers or {})}
         return await client.post(url, headers=headers, files=files, data=data)
 
@@ -411,6 +418,8 @@ class OpenAICompatSTTAdapter(BaseSTTAdapter):
         }
         if config.language:
             body["language"] = config.language
+        if prompt := stt_language_prompt(config):
+            body["prompt"] = prompt
         headers = {"Content-Type": "application/json", **auth, **(config.extra_headers or {})}
         return await client.post(url, headers=headers, json=body)
 
